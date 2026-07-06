@@ -1,11 +1,25 @@
+---
+type: prompt
+name: "{{prompt_name}}"
+date_updated: "{{date}}"
+tags:
+  - prompt
+---
+
 # {{prompt_name}}
 
-## Goal
+## 目的
 
-## Input
+## 使用情境
 
-## Output format
+## 輸入
 
-## Rules
+## 輸出格式
 
-## Constraints
+## 規則
+
+## 限制
+
+## 更新紀錄
+
+- {{date}}：建立。

@@ -626,6 +626,18 @@ URL 放在 Source 欄位，不要只放 URL。
 
 ---
 
+## Obsidian tags 規則
+
+YAML frontmatter 中的 tags 必須使用 Obsidian 有效格式：
+
+```yaml
+tags:
+  - ai/tool
+  - ai/project
+  - ai/paper
+
+---
+
 # 14. Telegram 摘要內容
 
 完成 Markdown 寫檔後，必須產生一份 Telegram 摘要內容。
