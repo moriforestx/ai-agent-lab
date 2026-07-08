@@ -39,7 +39,35 @@ link_exists() {
 }
 
 [ -n "$STAGE" ] || fail "missing stage directory"
+
+case "$STAGE" in
+  "$ROOT/.openclaw-stage/research-daily-"????-??-??|"$ROOT/.openclaw-stage/research-daily-"????-??-??/)
+    ;;
+  ./.openclaw-stage/research-daily-????-??-??|.openclaw-stage/research-daily-????-??-??)
+    STAGE="$ROOT/${STAGE#./}"
+    ;;
+  *)
+    fail "invalid stage path. must be: $ROOT/.openclaw-stage/research-daily-YYYY-MM-DD, got: $STAGE"
+    ;;
+esac
+
 [ -d "$STAGE" ] || fail "stage directory does not exist: $STAGE"
+
+if find "$ROOT" -maxdepth 1 -type d -name ".stage-*" | grep -q .; then
+  find "$ROOT" -maxdepth 1 -type d -name ".stage-*"
+  fail ".stage-* directories are not allowed"
+fi
+
+cd "$ROOT"
+
+dirty_official="$(
+  git status --short -- Daily Papers Tools Projects Concepts People || true
+)"
+
+if [ -n "$dirty_official" ]; then
+  echo "$dirty_official"
+  fail "official knowledge folders have uncommitted changes before promote"
+fi
 
 DAILY="$STAGE/Daily/$DATE.md"
 
@@ -67,6 +95,15 @@ if grep -R -nE "No relevant data found|無符合|沒有找到|找不到相關|�
   fail "Daily contains empty-category placeholder"
 fi
 
+empty_sources="$(
+  grep -nE 'Source：$|Source：[[:space:]]*$|Source：N/A|Source：無|Source：-|Source：null' "$DAILY" || true
+)"
+
+if [ -n "$empty_sources" ]; then
+  echo "$empty_sources"
+  fail "Daily contains empty Source lines"
+fi
+
 source_count="$(grep -cE 'Source：.*https?://' "$DAILY" || true)"
 [ "$source_count" -ge 6 ] || fail "Daily must contain at least 6 source URLs, found: $source_count"
 
@@ -84,7 +121,7 @@ while IFS= read -r -d '' file; do
   base="$(basename "$file")"
 
   case "$base" in
-    *$'\n'*|*$'\r'*|*'}'*|*'{'*)
+    *$'\n'*|*$'\r'*|*'}'*|*'{'*|*/*)
       fail "invalid filename: $file"
       ;;
   esac
@@ -153,13 +190,10 @@ for dir in Daily Papers Tools Projects Concepts People; do
   fi
 done
 
-cd "$ROOT"
-
 git add Daily Papers Tools Projects Concepts People
 
 if git diff --cached --quiet; then
-  echo "PROMOTE_AND_PUSH_OK_NO_CHANGES"
-  exit 0
+  fail "validation passed but promote produced no changes"
 fi
 
 git commit -m "daily research update $DATE"
