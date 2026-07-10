@@ -1,41 +1,63 @@
 ---
 type: concept
-name: "RAG vs Long Context"
+title: "RAG vs Long Context (檢索增強生成 vs 長上下文)"
 date_updated: "2026-07-10"
 tags:
   - concept
+  - llm
+  - architecture
 ---
 
 # RAG vs Long Context
 
-## 定義
+## 核心權衡
 
-長文檔處理的三大路徑對比：(1) RAG - 外部檢索增強；(2) 原生長上下文模型 - 注意力機制處理長序列；(3) LIFT 等參數內化知識方案。
+| 維度 | RAG | Long Context |
+|------|-----|--------------|
+| **成本** | 低 (固定檢索+短上下文) | 高 (完整上下文計算) |
+| **精度** | 依賴檢索質量 | 原生理解全文 |
+| **更新** | 即時 (更新索引) | 需重新預訓練/微調 |
+| **隱私** | 數據留在向量庫 | 需餵入模型上下文 |
+| **延遲** | 兩階段 (檢索+生成) | 單階段但 TTFT 高 |
+| **幻覺** | 可溯源到檢索片段 | 整體生成難溯源 |
 
-## 三路徑對比
+## 2026 共識：**混合架構**
 
-| 維度 | RAG | 原生長上下文 | LIFT 微調 |
-|------|-----|--------------|-----------|
-| 推理延遲 | 低 (檢索+短上下文) | 高 (O(n²) 注意力) | 低 (固定上下文) |
-| 知識更新 | 即時 (更新索引) | 需重新訓練/微調 | 需重新微調 |
-| 部署成本 | 中 (向量資料庫) | 高 (長上下文模型) | 低 (微調後模型) |
-| 幻覺風險 | 低 (有來源) | 中 | 中 |
+```
+用戶查詢
+    ↓
+意圖分類 → 短查詢? → RAG (低成本)
+           ↓
+      長查詢/需推理? → Long Context (高精度)
+           ↓
+      複雜推理? → RAG + Long Context 混合
+```
+
+## 混合策略
+
+1. **RAG 預檢索 → Long Context 推理**：檢索 Top-K → 拼接為長上下文餵入長模型
+2. **Long Context 壓縮 → RAG 索引**：長文檔壓縮摘要建索引，查詢時檢索摘要
+3. **Agent 級選擇**：Agent 根據任務類型動態選擇
 
 ## 為什麼重要
 
-2026 年三足鼎立，選型取決於業務場景：知識頻繁更新用 RAG、固定長文檔用長上下文、資源受限用 LIFT。
+單一技術無法覆蓋所有場景。混合架構是生產級 LLM 應用的標配。
 
 ## 出現在哪些內容
 
-- [[LIFT_Long_Input_Fine_Tuning]]
-- [[Long_Input_Fine_Tuning_LIFT]]
+- [[LIFT_Long_Input_Fine_Tuning]] (Papers)
+- [[Long_Context_LLM]] (Concepts)
+- [[Context_Compression]] (Concepts)
+- [[Long_Input_Fine_Tuning_LIFT]] (Concepts)
+- [[Knowledge_Distillation]] (Concepts)
 
 ## 相關概念
 
 - [[RAG_Retrieval_Augmented_Generation]]
-- [[Long_Context_LLM]]
-- [[Context_Compression]]
+- [[Long_Context_Window]]
+- [[Parameter_Efficient_Fine_Tuning]]
+- [[Knowledge_Distillation]]
 
 ## 更新紀錄
 
-- 2026-07-10：首次收錄。
+- 2026-07-10：首次建立。

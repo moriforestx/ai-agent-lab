@@ -10,8 +10,8 @@
 
 你必須遵守：
 
-1. 必須使用 Tavily 搜尋工具。
-2. 所有內容只能根據 Tavily 搜尋結果整理。
+1. 必須使用 web_search 搜尋工具（provider=tavily）。
+2. 所有內容只能根據 web_search 搜尋結果整理。
 3. 不可以憑空捏造 paper、工具、公司、模型、作者、日期、結論或網址。
 4. 不可以把舊資訊假裝成最新資訊。
 5. 不可以只把結果輸出在聊天訊息中，必須寫入 `.md` 檔案。
@@ -20,7 +20,7 @@
 8. 不可以使用簡體中文。
 9. 不可以使用詩意、抽象、玄學、幻想式語言。
 10. 每一個收錄項目都必須有 Source URL。
-11. 如果找不到有效資料，該分類必須寫：`No relevant data found in search results`
+11. 如果任何分類找不到有效資料（有 URL、有日期、符合新鮮度），整個任務失敗，不得寫入 Daily。
 
 ---
 
@@ -61,9 +61,9 @@
 
 # 2. 每日搜尋分類
 
-每天必須分成以下 5 個 AI 分類搜尋。
+每天必須分成以下 6 個 AI 分類�尋。
 
-每一類必須分開使用 Tavily 搜尋，不可以混用搜尋結果。
+每一類必須分開使用 web_search 搜尋，不可以混用搜尋結果。
 
 ---
 
@@ -167,7 +167,7 @@
 
 ---
 
-# 3. GitHub / Tools / Projects 搜尋
+## 2.6 GitHub / Tools / Projects
 
 除了 paper，也必須搜尋 GitHub / tools / projects。
 
@@ -198,7 +198,7 @@ GitHub / tool 收錄條件：
 
 ---
 
-# 4. 去重規則
+# 3. 去重規則
 
 寫入前必須檢查既有資料。
 
@@ -227,7 +227,7 @@ GitHub / tool 收錄條件：
 
 ---
 
-# 5. 重要性評分
+# 4. 重要性評分
 
 每一筆收錄內容都必須給 1–5 分。
 
@@ -248,7 +248,7 @@ GitHub / tool 收錄條件：
 
 ---
 
-# 6. 檔案儲存位置
+# 5. 檔案儲存位置
 
 所有資料都必須存到：
 
@@ -267,7 +267,7 @@ GitHub / tool 收錄條件：
 
 ---
 
-# 7. Daily 檔案
+# 6. Daily 檔案
 
 每日總覽檔案：
 
@@ -379,7 +379,7 @@ Daily 檔案格式：
 
 ---
 
-# 8. Papers 檔案
+# 7. Papers 檔案
 
 每篇重要 paper 都要建立或更新獨立檔案：
 
@@ -403,7 +403,7 @@ date_collected: "YYYY-MM-DD"
 published_date: "YYYY-MM-DD or unknown"
 source_url: "{url}"
 tags:
-  - AI
+  - ai/paper
 ---
 
 # {Paper Title}
@@ -445,7 +445,7 @@ tags:
 
 ---
 
-# 9. Tools 檔案
+# 8. Tools 檔案
 
 工具型 GitHub repo 或 AI 工具建立或更新檔案：
 
@@ -460,7 +460,7 @@ score: "{1-5}"
 date_collected: "YYYY-MM-DD"
 source_url: "{url}"
 tags:
-  - AI Tool
+  - ai/tool
 ---
 
 # {Tool Name}
@@ -494,7 +494,7 @@ tags:
 
 ---
 
-# 10. Projects 檔案
+# 9. Projects 檔案
 
 較大型的開源專案、研究專案、demo project 建立或更新檔案：
 
@@ -509,7 +509,7 @@ score: "{1-5}"
 date_collected: "YYYY-MM-DD"
 source_url: "{url}"
 tags:
-  - AI Project
+  - ai/project
 ---
 
 # {Project Name}
@@ -534,7 +534,7 @@ tags:
 
 ---
 
-# 11. Concepts 檔案
+# 10. Concepts 檔案
 
 每天必須從收錄內容中抽取 3–8 個重要概念。
 
@@ -551,7 +551,7 @@ type: concept
 name: "{concept name}"
 date_updated: "YYYY-MM-DD"
 tags:
-  - Concept
+  - concept
 ---
 
 # {Concept Name}
@@ -576,7 +576,7 @@ tags:
 
 ---
 
-# 12. People 檔案
+# 11. People 檔案
 
 只有在人物是核心貢獻者、研究負責人、公司重要技術人物時，才建立或更新：
 
@@ -591,7 +591,7 @@ type: person
 name: "{person name}"
 date_updated: "YYYY-MM-DD"
 tags:
-  - People
+  - people
 ---
 
 # {Person Name}
@@ -610,7 +610,7 @@ tags:
 
 ---
 
-# 13. Obsidian 連結規則
+# 12. Obsidian 連結規則
 
 所有 Daily 檔案必須使用 Obsidian-style links：
 
@@ -635,17 +635,114 @@ tags:
   - ai/tool
   - ai/project
   - ai/paper
+  - concept
+  - people
+```
+
+多字 tag 使用 `/`、`-` 或 `_`。
+
+tags 不得包含空白。
+tags 不得加 `#`。
 
 ---
 
-# 14. Telegram 摘要內容
+# 13. 分階段執行規則（Phase Checkpoint）
 
-完成 Markdown 寫檔後，必須產生一份 Telegram 摘要內容。
+research-daily 必須以分階段工作流執行。
+
+每個階段必須寫入狀態檔並回報檢查點。
+
+狀態檔路徑：
+
+`/home/local/AI-Agent-Lab/.openclaw-stage/research-daily-YYYY-MM-DD/STATUS.md`
+
+日誌檔路徑：
+
+`/home/local/AI-Agent-Lab/.openclaw-stage/research-daily-YYYY-MM-DD/RUNLOG.md`
+
+必要階段：
+
+**Phase 0: preflight**
+- 確認 repo 路徑
+- 確認 staging 路徑
+- 確認 git status
+- 確認搜尋工具規劃
+- 不寫入正式研究檔案
+
+**Phase 1: search**
+- 使用 web_search
+- web_search provider 是 tavily
+- 將搜尋結果存入 staging
+- 不寫入正式資料夾
+- 不驗證
+- 不 git commit
+- 不 git push
+
+**Phase 2: write staging**
+- 只在 staging 底下寫入 Daily / Papers / Tools / Projects / Concepts
+- 不直接寫入正式資料夾
+- 不 git commit
+- 不 git push
+
+**Phase 3: validate**
+- 執行驗證腳本
+- 將完整指令輸出存入 RUNLOG.md
+- 只回報 PASS / FAIL 與日誌路徑
+- 驗證失敗時不自行修復
+- 驗證失敗時不重新搜尋
+
+**Phase 4: promote and push**
+- 驗證通過後才執行
+- 必須收到 PROMOTE_AND_PUSH_OK
+- 回報 commit hash 與 push 狀態
+
+每個階段檢查點，只回報：
+
+```
+PHASE <number> <OK|FAIL|BLOCKED>
+- What completed
+- Files written
+- Next required phase
+- Log path
+```
+
+不要貼長日誌到聊天。
+不要貼完整檔案內容到聊天。
+
+---
+
+# 14. Telegram 檔案寫入規則
+
+在 Telegram 會話中，research-daily 的所有檔案建立、檔案驗證、STATUS.md 更新、RUNLOG.md 更新、驗證指令、git 指令、promote 指令，必須透過 exec 執行。
+
+原因：Telegram write tool 可能回報成功但檔案未實際建立。
+
+每次檔案寫入，exec 必須驗證：
+
+- 檔案存在
+- 檔案非空
+- 適用時包含預期標記文字
+
+除非 exec 輸出確認檔案存在於磁碟，否則不得回報 OK。
+
+必要 exec 驗證範例：
+
+```bash
+test -s <file> && echo FILE_EXISTS || echo FILE_MISSING
+grep -q '<expected marker>' <file> && echo MARKER_OK || echo MARKER_MISSING
+```
+
+---
+
+# 15. Telegram 摘要內容
+
+完成 Markdown 寫檔且驗證通過後，必須產生一份 Telegram 摘要內容。
 
 Telegram 摘要必須使用繁體中文，不要太長。
 
 格式：
 
+```
 📡 每日 AI Research - YYYY-MM-DD
 
 今日重點：
@@ -668,14 +765,15 @@ Telegram 摘要必須使用繁體中文，不要太長。
 Daily/YYYY-MM-DD.md
 
 GitHub 已更新。
+```
 
 ---
 
-# 15. 最終完成條件
+# 16. 最終完成條件
 
 一次成功的 research-daily 執行，必須完成：
 
-1. Tavily 搜尋已執行
+1. web_search（provider=tavily）搜尋已執行
 2. Daily/YYYY-MM-DD.md 已建立或更新
 3. Papers/ 已新增或更新重要 paper
 4. Tools/ 已新增或更新重要工具
@@ -688,3 +786,5 @@ GitHub 已更新。
 11. 每個 item 都有 Score
 12. 每個 item 都有日期或日期不明原因
 13. 產生 Telegram 摘要內容
+14. 分四階段執行並寫入 STATUS.md / RUNLOG.md
+15. 所有檔案透過 exec 寫入並驗證存在

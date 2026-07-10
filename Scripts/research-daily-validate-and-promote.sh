@@ -38,6 +38,69 @@ link_exists() {
   return 1
 }
 
+check_duplicates() {
+  local daily="$STAGE/Daily/$DATE.md"
+  local tmpfile="$(mktemp)"
+  
+  # Extract titles and URLs from Daily items
+  grep -E '^### [0-9]+\. ' "$daily" | while IFS= read -r line; do
+    title="${line#### *. }"
+    echo "TITLE:$title" >> "$tmpfile"
+  done
+  
+  grep -E 'Source：https?://' "$daily" | while IFS= read -r line; do
+    url="${line#*Source：}"
+    echo "URL:$url" >> "$tmpfile"
+  done
+  
+  # Check against existing files in official folders
+  for folder in Papers Tools Projects Concepts People; do
+    if [ -d "$ROOT/$folder" ]; then
+      while IFS= read -r -d '' file; do
+        # Check title match
+        existing_title="$(grep -m1 '^title:' "$file" | cut -d'"' -f2)"
+        if [ -n "$existing_title" ]; then
+          if grep -q "^TITLE:$existing_title$" "$tmpfile"; then
+            echo "Duplicate title found: $existing_title (in $ROOT/$folder/$(basename "$file"))"
+            rm -f "$tmpfile"
+            return 1
+          fi
+        fi
+        # Check URL match
+        existing_url="$(grep -m1 'source_url:' "$file" | cut -d'"' -f2)"
+        if [ -n "$existing_url" ]; then
+          if grep -q "^URL:$existing_url$" "$tmpfile"; then
+            echo "Duplicate URL found: $existing_url (in $ROOT/$folder/$(basename "$file"))"
+            rm -f "$tmpfile"
+            return 1
+          fi
+        fi
+        # Check arXiv ID
+        existing_arxiv="$(grep -m1 'arxiv:' "$file" | cut -d'"' -f2)"
+        if [ -n "$existing_arxiv" ]; then
+          if grep -q "$existing_arxiv" "$tmpfile"; then
+            echo "Duplicate arXiv ID found: $existing_arxiv (in $ROOT/$folder/$(basename "$file"))"
+            rm -f "$tmpfile"
+            return 1
+          fi
+        fi
+        # Check GitHub URL
+        existing_github="$(grep -m1 'github.com' "$file" | head -1)"
+        if [ -n "$existing_github" ]; then
+          if grep -q "$existing_github" "$tmpfile"; then
+            echo "Duplicate GitHub URL found: $existing_github (in $ROOT/$folder/$(basename "$file"))"
+            rm -f "$tmpfile"
+            return 1
+          fi
+        fi
+      done < <(find "$ROOT/$folder" -type f -name "*.md" -print0)
+    fi
+  done
+  
+  rm -f "$tmpfile"
+  return 0
+}
+
 [ -n "$STAGE" ] || fail "missing stage directory"
 
 case "$STAGE" in
@@ -127,24 +190,15 @@ while IFS= read -r -d '' file; do
   esac
 done < <(find "$STAGE" -type f -print0)
 
+# Valid tags: ai/tool, ai/project, ai/paper, concept, people (no spaces, no #)
 invalid_tags="$(
   find "$STAGE" -type f -name "*.md" -print0 \
-    | xargs -0 -r grep -nE '^[[:space:]]+-[[:space:]]+(AI Tool|AI Project|AI|Concept|People)$' || true
+    | xargs -0 -r grep -nE '^[[:space:]]+-[[:space:]]+(AI Tool|AI Project|AI|Concept|People|#[^[:space:]]+)$' || true
 )"
 
 if [ -n "$invalid_tags" ]; then
   echo "$invalid_tags"
-  fail "invalid Obsidian tag format"
-fi
-
-hash_tags="$(
-  find "$STAGE" -type f -name "*.md" -print0 \
-    | xargs -0 -r grep -nE '^[[:space:]]+-[[:space:]]+#' || true
-)"
-
-if [ -n "$hash_tags" ]; then
-  echo "$hash_tags"
-  fail "tags must not include #"
+  fail "invalid Obsidian tag format. Use: ai/tool, ai/project, ai/paper, concept, people (no spaces, no #)"
 fi
 
 for dir in Papers Tools Projects Concepts People; do
@@ -181,6 +235,11 @@ if [ -s "$missing_links_file" ]; then
 fi
 
 rm -f "$missing_links_file"
+
+# Check duplicates
+if ! check_duplicates; then
+  fail "Duplicate content detected in official knowledge base"
+fi
 
 mkdir -p "$ROOT/Daily" "$ROOT/Papers" "$ROOT/Tools" "$ROOT/Projects" "$ROOT/Concepts" "$ROOT/People"
 
