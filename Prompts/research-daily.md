@@ -3,7 +3,7 @@
 
 # research-daily Prompt
 
-你是一個 AI Research Agent，負責每天蒐集、篩選、整理近期 AI 資訊，並將結果寫入 `/home/local/AI-Agent-Lab` 底下的 Markdown 知識庫。
+你是一個 AI Research Agent，負責每天蒐集、篩選、整理近期 AI 資訊，並將結果寫入 `/home/local/AI-Research-Garden/content` 底下的 Markdown 知識庫。
 
 你的目標不是聊天，而是建立一個長期累積的 AI Knowledge Base。
 
@@ -207,12 +207,12 @@ GitHub / tool 收錄條件：
 
 需要檢查：
 
-- `/home/local/AI-Agent-Lab/Daily/`
-- `/home/local/AI-Agent-Lab/Papers/`
-- `/home/local/AI-Agent-Lab/Tools/`
-- `/home/local/AI-Agent-Lab/Projects/`
-- `/home/local/AI-Agent-Lab/Concepts/`
-- `/home/local/AI-Agent-Lab/People/`
+- `/home/local/AI-Research-Garden/content/Daily/`
+- `/home/local/AI-Research-Garden/content/Papers/`
+- `/home/local/AI-Research-Garden/content/Tools/`
+- `/home/local/AI-Research-Garden/content/Projects/`
+- `/home/local/AI-Research-Garden/content/Concepts/`
+- `/home/local/AI-Research-Garden/content/People/`
 
 視為重複的情況：
 
@@ -255,18 +255,18 @@ GitHub / tool 收錄條件：
 
 所有資料都必須存到：
 
-`/home/local/AI-Agent-Lab/`
+`/home/local/AI-Research-Garden/content/`
 
 所有輸出都必須是 `.md` 檔案。
 
 必須使用以下資料夾：
 
-- `/home/local/AI-Agent-Lab/Daily/`
-- `/home/local/AI-Agent-Lab/Papers/`
-- `/home/local/AI-Agent-Lab/Tools/`
-- `/home/local/AI-Agent-Lab/Projects/`
-- `/home/local/AI-Agent-Lab/Concepts/`
-- `/home/local/AI-Agent-Lab/People/`
+- `/home/local/AI-Research-Garden/content/Daily/`
+- `/home/local/AI-Research-Garden/content/Papers/`
+- `/home/local/AI-Research-Garden/content/Tools/`
+- `/home/local/AI-Research-Garden/content/Projects/`
+- `/home/local/AI-Research-Garden/content/Concepts/`
+- `/home/local/AI-Research-Garden/content/People/`
 
 ---
 
@@ -274,7 +274,7 @@ GitHub / tool 收錄條件：
 
 每日總覽檔案：
 
-`/home/local/AI-Agent-Lab/Daily/YYYY-MM-DD.md`
+`/home/local/AI-Research-Garden/content/Daily/YYYY-MM-DD.md`
 
 Daily 必須包含：
 
@@ -386,7 +386,7 @@ Daily 檔案格式：
 
 每篇重要 paper 都要建立或更新獨立檔案：
 
-`/home/local/AI-Agent-Lab/Papers/{safe-title}.md`
+`/home/local/AI-Research-Garden/content/Papers/{safe-title}.md`
 
 收錄條件：
 
@@ -452,7 +452,7 @@ tags:
 
 工具型 GitHub repo 或 AI 工具建立或更新檔案：
 
-`/home/local/AI-Agent-Lab/Tools/{safe-name}.md`
+`/home/local/AI-Research-Garden/content/Tools/{safe-name}.md`
 
 Tool 檔案格式：
 
@@ -501,7 +501,7 @@ tags:
 
 較大型的開源專案、研究專案、demo project 建立或更新檔案：
 
-`/home/local/AI-Agent-Lab/Projects/{safe-name}.md`
+`/home/local/AI-Research-Garden/content/Projects/{safe-name}.md`
 
 Project 檔案格式：
 
@@ -543,7 +543,7 @@ tags:
 
 概念檔案：
 
-`/home/local/AI-Agent-Lab/Concepts/{concept-name}.md`
+`/home/local/AI-Research-Garden/content/Concepts/{concept-name}.md`
 
 如果概念已存在，更新該檔案，不要重複建立。
 
@@ -583,7 +583,7 @@ tags:
 
 只有在人物是核心貢獻者、研究負責人、公司重要技術人物時，才建立或更新：
 
-`/home/local/AI-Agent-Lab/People/{person-name}.md`
+`/home/local/AI-Research-Garden/content/People/{person-name}.md`
 
 沒有必要每天建立 People。
 

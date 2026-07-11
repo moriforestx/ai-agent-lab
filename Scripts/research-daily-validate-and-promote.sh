@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="/home/local/AI-Agent-Lab"
+AI_LAB_ROOT="/home/local/AI-Agent-Lab"
+WEB_ROOT="/home/local/AI-Research-Garden"
+WEB_CONTENT="$WEB_ROOT/content"
 STAGE="${1:-}"
 DATE="${2:-$(date +%F)}"
 
@@ -25,11 +27,11 @@ link_exists() {
 
   if [[ "$target" == */* ]]; then
     [ -f "$STAGE/$target.md" ] && return 0
-    [ -f "$ROOT/$target.md" ] && return 0
+    [ -f "$WEB_CONTENT/$target.md" ] && return 0
     return 1
   fi
 
-  for base in "$STAGE" "$ROOT"; do
+  for base in "$STAGE" "$WEB_CONTENT"; do
     for dir in Daily Papers Tools Projects Concepts People; do
       [ -f "$base/$dir/$target.md" ] && return 0
     done
@@ -53,47 +55,43 @@ check_duplicates() {
     echo "URL:$url" >> "$tmpfile"
   done
   
-  # Check against existing files in official folders
+  # Check against existing files in WEB_CONTENT
   for folder in Papers Tools Projects Concepts People; do
-    if [ -d "$ROOT/$folder" ]; then
+    if [ -d "$WEB_CONTENT/$folder" ]; then
       while IFS= read -r -d '' file; do
-        # Check title match
         existing_title="$(grep -m1 '^title:' "$file" | cut -d'"' -f2)"
         if [ -n "$existing_title" ]; then
           if grep -q "^TITLE:$existing_title$" "$tmpfile"; then
-            echo "Duplicate title found: $existing_title (in $ROOT/$folder/$(basename "$file"))"
+            echo "Duplicate title found: $existing_title (in $WEB_CONTENT/$folder/$(basename "$file"))"
             rm -f "$tmpfile"
             return 1
           fi
         fi
-        # Check URL match
         existing_url="$(grep -m1 'source_url:' "$file" | cut -d'"' -f2)"
         if [ -n "$existing_url" ]; then
           if grep -q "^URL:$existing_url$" "$tmpfile"; then
-            echo "Duplicate URL found: $existing_url (in $ROOT/$folder/$(basename "$file"))"
+            echo "Duplicate URL found: $existing_url (in $WEB_CONTENT/$folder/$(basename "$file"))"
             rm -f "$tmpfile"
             return 1
           fi
         fi
-        # Check arXiv ID
         existing_arxiv="$(grep -m1 'arxiv:' "$file" | cut -d'"' -f2)"
         if [ -n "$existing_arxiv" ]; then
           if grep -q "$existing_arxiv" "$tmpfile"; then
-            echo "Duplicate arXiv ID found: $existing_arxiv (in $ROOT/$folder/$(basename "$file"))"
+            echo "Duplicate arXiv ID found: $existing_arxiv (in $WEB_CONTENT/$folder/$(basename "$file"))"
             rm -f "$tmpfile"
             return 1
           fi
         fi
-        # Check GitHub URL
         existing_github="$(grep -m1 'github.com' "$file" | head -1)"
         if [ -n "$existing_github" ]; then
           if grep -q "$existing_github" "$tmpfile"; then
-            echo "Duplicate GitHub URL found: $existing_github (in $ROOT/$folder/$(basename "$file"))"
+            echo "Duplicate GitHub URL found: $existing_github (in $WEB_CONTENT/$folder/$(basename "$file"))"
             rm -f "$tmpfile"
             return 1
           fi
         fi
-      done < <(find "$ROOT/$folder" -type f -name "*.md" -print0)
+      done < <(find "$WEB_CONTENT/$folder" -type f -name "*.md" -print0)
     fi
   done
   
@@ -104,32 +102,34 @@ check_duplicates() {
 [ -n "$STAGE" ] || fail "missing stage directory"
 
 case "$STAGE" in
-  "$ROOT/.openclaw-stage/research-daily-"????-??-??|"$ROOT/.openclaw-stage/research-daily-"????-??-??/)
+  "$AI_LAB_ROOT/.openclaw-stage/research-daily-"????-??-??|"$AI_LAB_ROOT/.openclaw-stage/research-daily-"????-??-??/)
     ;;
   ./.openclaw-stage/research-daily-????-??-??|.openclaw-stage/research-daily-????-??-??)
-    STAGE="$ROOT/${STAGE#./}"
+    STAGE="$AI_LAB_ROOT/${STAGE#./}"
     ;;
   *)
-    fail "invalid stage path. must be: $ROOT/.openclaw-stage/research-daily-YYYY-MM-DD, got: $STAGE"
+    fail "invalid stage path. must be: $AI_LAB_ROOT/.openclaw-stage/research-daily-YYYY-MM-DD, got: $STAGE"
     ;;
 esac
 
 [ -d "$STAGE" ] || fail "stage directory does not exist: $STAGE"
 
-if find "$ROOT" -maxdepth 1 -type d -name ".stage-*" | grep -q .; then
-  find "$ROOT" -maxdepth 1 -type d -name ".stage-*"
-  fail ".stage-* directories are not allowed"
+# 不允許 .stage-* 目錄存在於 AI-Agent-Lab 根目錄
+if find "$AI_LAB_ROOT" -maxdepth 1 -type d -name '.stage-*' | grep -q .; then
+  find "$AI_LAB_ROOT" -maxdepth 1 -type d -name '.stage-*'
+  fail ".stage-* directories are not allowed in AI-Agent-Lab"
 fi
 
-cd "$ROOT"
+cd "$WEB_ROOT"
 
+# 檢查 Web repo 正式內容資料夾是否有未提交變更
 dirty_official="$(
-  git status --short -- Daily Papers Tools Projects Concepts People || true
+  git status --short -- content/Daily content/Papers content/Tools content/Projects content/Concepts content/People content/Assets || true
 )"
 
 if [ -n "$dirty_official" ]; then
   echo "$dirty_official"
-  fail "official knowledge folders have uncommitted changes before promote"
+  fail "official content folders have uncommitted changes before promote"
 fi
 
 DAILY="$STAGE/Daily/$DATE.md"
@@ -146,7 +146,7 @@ required_sections=(
   "## 🤖 AI Agents"
   "## 🛠 GitHub / Tools / Projects"
   "## 💡 今日跨領域洞察"
-  "## 📌 對我的行動建議"
+  "## 📌 行動建議"
   "## 今日新增 / 更新檔案"
 )
 
@@ -184,7 +184,7 @@ while IFS= read -r -d '' file; do
   base="$(basename "$file")"
 
   case "$base" in
-    *$'\n'*|*$'\r'*|*'}'*|*'{'*|*/*)
+    *$\u0027\n'*|*$\u0027\r'*|*\u0027}'*|*\u0027{'*|*/*)
       fail "invalid filename: $file"
       ;;
   esac
@@ -218,7 +218,7 @@ while IFS= read -r -d '' file; do
     target="${target%\]\]}"
     target="${target%%|*}"
     target="${target%%#*}"
-    target="$(printf '%s' "$target" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    target="$(printf '%s' '$target' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
     [ -n "$target" ] || continue
 
@@ -236,26 +236,52 @@ fi
 
 rm -f "$missing_links_file"
 
-# Check duplicates
+# Check duplicates against existing Web Content
 if ! check_duplicates; then
-  fail "Duplicate content detected in official knowledge base"
+  fail "Duplicate content detected in Web Repository"
 fi
 
-mkdir -p "$ROOT/Daily" "$ROOT/Papers" "$ROOT/Tools" "$ROOT/Projects" "$ROOT/Concepts" "$ROOT/People"
-
-for dir in Daily Papers Tools Projects Concepts People; do
+# Promote to Web Content using rsync -a (preserve history, no --delete)
+promote_list="$(mktemp)"
+for dir in Daily Papers Tools Projects Concepts People Assets; do
   if [ -d "$STAGE/$dir" ]; then
-    cp -a "$STAGE/$dir/." "$ROOT/$dir/"
+    rsync -a "$STAGE/$dir/" "$WEB_CONTENT/$dir/"
+    find "$STAGE/$dir" -type f -name "*.md" | while IFS= read -r f; do
+      rel="${f#$STAGE/}"
+      echo "$rel" >> "$promote_list"
+    done
   fi
 done
 
-git add Daily Papers Tools Projects Concepts People
+# 保護網站控制檔案 - 不可被覆蓋或刪除
+protected_files=(
+  "content/index.md"
+  "content/Daily/index.md"
+  "content/Papers/index.md"
+  "content/Tools/index.md"
+  "content/Projects/index.md"
+  "content/Concepts/index.md"
+  "content/People/index.md"
+)
 
-if git diff --cached --quiet; then
-  fail "validation passed but promote produced no changes"
+for pf in "${protected_files[@]}"; do
+  if grep -q "^$pf$" "$promote_list"; then
+    echo "ERROR: Staging contains protected index file: $pf"
+    rm -f "$promote_list"
+    fail "Staging must not contain protected index.md files"
+  fi
+  # 如果被意外覆蓋，從 git 恢復
+  if [ -f "$WEB_ROOT/$pf" ]; then
+    git -C "$WEB_ROOT" checkout HEAD -- "$pf" 2>/dev/null || true
+  fi
+done
+
+rm -f "$promote_list"
+
+# 執行 Web 發布腳本
+echo "===== Running Web publish script ====="
+if ! "$AI_LAB_ROOT/Scripts/publish-research-web.sh"; then
+  fail "Web publish script failed"
 fi
-
-git commit -m "daily research update $DATE"
-git push origin main
 
 echo "PROMOTE_AND_PUSH_OK"

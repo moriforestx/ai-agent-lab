@@ -1,7 +1,7 @@
 ---
-type: person
-name: "{{name}}"
-date_updated: "{{date}}"
+title: "{{name}}"
+date: {{date}}
+description: "{{description}}"
 tags:
   - people
 ---
@@ -10,20 +10,8 @@ tags:
 
 ## 身分
 
-說明此人物的角色、單位或貢獻領域。
+## 相關研究/專案
 
-## 相關研究 / 專案
+## 重要性
 
-- [[...]]
-
-## 為什麼值得追蹤
-
-說明此人物為什麼與目前知識庫有關。
-
-## 相關概念
-
-- [[...]]
-
-## 更新紀錄
-
-- {{date}}：首次收錄。
+## 來源
