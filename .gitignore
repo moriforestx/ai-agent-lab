@@ -1,2 +1,5 @@
 .obsidian
 .openclaw-stage/
+
+# Local backup files and directories
+*.bak

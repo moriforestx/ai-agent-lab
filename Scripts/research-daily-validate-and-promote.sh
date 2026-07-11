@@ -190,15 +190,15 @@ while IFS= read -r -d '' file; do
   esac
 done < <(find "$STAGE" -type f -print0)
 
-# Valid tags: ai/tool, ai/project, ai/paper, concept, people (no spaces, no #)
+# Valid tags: daily-research, ai-research, ai, paper, tool, project, concept, people, prompt (no spaces, no #)
 invalid_tags="$(
   find "$STAGE" -type f -name "*.md" -print0 \
-    | xargs -0 -r grep -nE '^[[:space:]]+-[[:space:]]+(AI Tool|AI Project|AI|Concept|People|#[^[:space:]]+)$' || true
+    | xargs -0 -r grep -nE '^[[:space:]]+-[[:space:]]+(AI Tool|AI Project|AI|Concept|People|#[^[:space:]]+|ai/paper|ai/tool|ai/project)$' || true
 )"
 
 if [ -n "$invalid_tags" ]; then
   echo "$invalid_tags"
-  fail "invalid Obsidian tag format. Use: ai/tool, ai/project, ai/paper, concept, people (no spaces, no #)"
+  fail "invalid Obsidian tag format. Use: daily-research, ai-research, ai, paper, tool, project, concept, people, prompt (no spaces, no #)"
 fi
 
 for dir in Papers Tools Projects Concepts People; do

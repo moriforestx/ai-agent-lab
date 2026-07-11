@@ -247,7 +247,7 @@ GitHub / tool 收錄條件：
 - Score
 - 為什麼是這個分數
 - 證據來源
-- 對我可能有什麼影響
+- 可能帶來什麼影響
 
 ---
 
@@ -286,7 +286,7 @@ Daily 必須包含：
 - AI Agents
 - GitHub / Tools / Projects
 - 今日跨領域洞察
-- 對我的行動建議
+- 行動建議
 - 今日新增 / 更新檔案列表
 
 Daily 檔案格式：
@@ -361,7 +361,7 @@ Daily 檔案格式：
 
 ---
 
-## 📌 對我的行動建議
+## 📌 行動建議
 
 列出 3–5 點。
 
@@ -406,7 +406,8 @@ date_collected: "YYYY-MM-DD"
 published_date: "YYYY-MM-DD or unknown"
 source_url: "{url}"
 tags:
-  - ai/paper
+  - ai
+  - paper
 ---
 
 # {Paper Title}
@@ -433,9 +434,9 @@ tags:
 
 說明這篇 paper 的價值。
 
-## 可能影響我
+## 可能影響
 
-說明它可能如何影響我的 AI Agent Lab、研究方向、工具選擇或未來實作。
+說明它可能如何影響 AI Agent Lab、研究方向、工具選擇或未來實作。
 
 ## 相關概念
 
@@ -463,7 +464,8 @@ score: "{1-5}"
 date_collected: "YYYY-MM-DD"
 source_url: "{url}"
 tags:
-  - ai/tool
+  - ai
+  - tool
 ---
 
 # {Tool Name}
@@ -482,7 +484,7 @@ tags:
 
 說明它為什麼值得追蹤。
 
-## 可能影響我
+## 可能影響
 
 說明它是否可能用在 AI Agent Lab、OpenClaw、Research workflow、Obsidian/GitHub pipeline。
 
@@ -512,7 +514,8 @@ score: "{1-5}"
 date_collected: "YYYY-MM-DD"
 source_url: "{url}"
 tags:
-  - ai/project
+  - ai
+  - project
 ---
 
 # {Project Name}
@@ -525,7 +528,7 @@ tags:
 
 ## 為什麼值得追蹤
 
-## 可能影響我
+## 可能影響
 
 ## 相關工具 / 概念
 
@@ -635,11 +638,15 @@ YAML frontmatter 中的 tags 必須使用 Obsidian 有效格式：
 
 ```yaml
 tags:
-  - ai/tool
-  - ai/project
-  - ai/paper
+  - daily-research
+  - ai-research
+  - ai
+  - tool
+  - project
+  - paper
   - concept
   - people
+  - prompt
 ```
 
 多字 tag 使用 `/`、`-` 或 `_`。
