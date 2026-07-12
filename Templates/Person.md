@@ -1,53 +1,59 @@
 ---
-title: "{{name}}"
+title: "{{title}}"
 type: person
-date: {{date}}
-date_updated: {{date}}
+affiliation: "{{affiliation}}"
+research_topics: []
+keywords: []
+official_url: "{{official_url}}"
+date_collected: "{{date_collected}}"
+date_updated: "{{date_updated}}"
 tags:
-  - people
-aliases: []
+  - ai
+  - person
 ---
 
-# {{name}}
+# {{title}}
 
-## 身分
+## 基本資訊
 
-{{role_and_affiliation}}
+- 所屬機構：{{affiliation}}
+- 研究主題：{{research_topics_text}}
+- 關鍵字：{{keywords_text}}
+- 官方頁面：{{official_url}}
 
-## 專長與貢獻領域
+## 人物概要
 
-- {{expertise_1}}
-- {{expertise_2}}
-- {{expertise_3}}
+{{summary}}
 
-## 主要貢獻
+## 主要研究與專業領域
 
-{{main_contributions}}
+{{research_and_expertise}}
 
-## 相關研究 / 專案
+## 代表性成果
 
-- [[{{related_research_or_project}}]]
+{{notable_contributions}}
 
-## 為什麼值得追蹤
+## 重要論文與報告
 
-{{tracking_value}}
+{{related_papers_and_reports}}
 
-## 相關 Papers
+## 相關工具與專案
 
-- [[{{related_paper}}]]
+{{related_tools_and_projects}}
 
-## 相關 Tools / Projects
+## 相關技術動態與落地資訊
 
-- [[{{related_tool_or_project}}]]
+{{related_developments_and_applications}}
 
 ## 相關概念
 
-- [[{{related_concept}}]]
+{{related_concepts}}
 
-## 參考來源
+## 維護紀錄
 
-- [{{source_title}}]({{source_url}})
+- 收錄日期：{{date_collected}}
+- 最後更新：{{date_updated}}
 
-## 更新紀錄
+### 更新紀錄
 
-- {{date}}：首次收錄。
+{{update_history}}

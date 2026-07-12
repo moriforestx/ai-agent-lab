@@ -1,83 +1,83 @@
 ---
-title: "{{name}}"
+title: "{{title}}"
 type: tool
-score: {{score}}
-date: {{date}}
-date_collected: {{date}}
+research_topic: "{{research_topic}}"
+published_date: "{{published_date}}"
+developer: "{{developer}}"
+license: "{{license}}"
+repository_url: "{{repository_url}}"
+documentation_url: "{{documentation_url}}"
 source_url: "{{source_url}}"
-github_url: "{{github_url}}"
+keywords: []
+date_collected: "{{date_collected}}"
+date_updated: "{{date_updated}}"
 tags:
   - ai
   - tool
 ---
 
-# {{name}}
-
-## 這是什麼
-
-{{tool_summary}}
+# {{title}}
 
 ## 基本資訊
 
-- ⭐ Score：{{score}}
-- 📅 收錄日期：{{date}}
-- 🔗 Source：[{{source_title}}]({{source_url}})
-- 💻 GitHub：[{{github_repository}}]({{github_url}})
-- 📌 維護狀態：{{maintenance_status}}
+- 開發者或維護團隊：{{developer}}
+- 發布日期：{{published_date}}
+- 研究主題：{{research_topic}}
+- 關鍵字：{{keywords_text}}
+- 授權方式：{{license}}
+- 程式碼倉庫：{{repository_url}}
+- 官方文件：{{documentation_url}}
+- 主要來源：{{source_url}}
 
-## 主要功能
+## 工具概要
 
-- {{feature_1}}
-- {{feature_2}}
-- {{feature_3}}
+{{summary}}
 
-## 適用場景
+## 核心功能
 
-- {{use_case_1}}
-- {{use_case_2}}
-- {{use_case_3}}
+{{core_features}}
 
-## 安裝與使用方式
+## 適用情境
 
-{{installation_and_usage}}
+{{use_cases}}
 
-## 為什麼重要
+## 安裝方式
 
-{{importance}}
+{{installation}}
 
-## 可能影響
+> 安裝方式只能根據官方 README、官方文件或官方範例整理。官方未提供可驗證的安裝方式時，明確標示「官方未提供可驗證的安裝方式」。
 
-{{impact}}
+## 基本使用方式
 
-## 優點
+{{basic_usage}}
 
-- {{advantage_1}}
-- {{advantage_2}}
-- {{advantage_3}}
+> 使用方式只能根據官方 README、官方文件或官方範例整理，不得自行推測指令、參數或設定。
 
-## 限制與風險
+## 技術需求與相依項目
 
-- {{limitation_1}}
-- {{limitation_2}}
-- {{limitation_3}}
+{{requirements_and_dependencies}}
 
-## 相關 Papers
+## 優點與實務價值
 
-- [[{{related_paper}}]]
+{{advantages_and_practical_value}}
 
-## 相關概念
+## 限制與注意事項
 
-- [[{{related_concept}}]]
+{{limitations}}
 
 ## 相關專案
 
-- [[{{related_project}}]]
+{{related_projects}}
 
-## 參考來源
+## 相關概念
 
-- [{{source_title}}]({{source_url}})
-- [GitHub Repository]({{github_url}})
+{{related_concepts}}
 
-## 更新紀錄
+## 維護紀錄
 
-- {{date}}：首次收錄。
+- 收錄日期：{{date_collected}}
+- 最後更新：{{date_updated}}
+
+### 更新紀錄
+
+{{update_history}}

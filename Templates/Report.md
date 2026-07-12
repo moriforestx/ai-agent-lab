@@ -1,56 +1,55 @@
 ---
 title: "{{title}}"
-type: paper
+type: report
 research_topic: "{{research_topic}}"
 published_date: "{{published_date}}"
 authors: []
+organization: "{{organization}}"
 keywords: []
-identifier: "{{identifier}}"
-identifier_type: "{{identifier_type}}"
-publication_status: "{{publication_status}}"
+report_type: "{{report_type}}"
 source_url: "{{source_url}}"
 date_collected: "{{date_collected}}"
 date_updated: "{{date_updated}}"
 tags:
   - ai
-  - paper
+  - report
 ---
 
 # {{title}}
 
 ## 基本資訊
 
-- 作者：{{authors_text}}
+- 作者或團隊：{{authors_text}}
+- 發布機構：{{organization}}
 - 發布日期：{{published_date}}
 - 研究主題：{{research_topic}}
 - 關鍵字：{{keywords_text}}
-- 論文識別碼：{{identifier_text}}
-- 發表狀態：{{publication_status_text}}
+- 報告類型：{{report_type_text}}
 - 主要來源：{{source_url}}
 
-## 摘要
+## 報告概要
 
 {{summary}}
 
-## 核心研究問題
+## 分析範圍與目的
 
-{{research_question}}
+{{scope_and_purpose}}
 
-## 方法與技術
+## 方法與資料來源
 
-{{methods}}
+{{methods_and_data_sources}}
 
-## 實驗與研究結果
+## 主要發現
 
-{{results}}
+{{key_findings}}
 
-## 研究意義與適用範圍
+## 技術與實務意義
 
-{{significance_and_scope}}
+{{technical_and_practical_significance}}
 
-## 限制與注意事項
+## 限制與適用邊界
 
-{{limitations}}
+{{limitations_and_scope}}
 
 ## 相關概念
 
@@ -64,5 +63,7 @@ tags:
 
 - 收錄日期：{{date_collected}}
 - 最後更新：{{date_updated}}
-- 更新紀錄：
+
+### 更新紀錄
+
 {{update_history}}

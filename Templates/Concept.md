@@ -1,69 +1,67 @@
 ---
-title: "{{concept}}"
+title: "{{title}}"
 type: concept
-date: {{date}}
-date_updated: {{date}}
+research_topic: "{{research_topic}}"
+keywords: []
+date_collected: "{{date_collected}}"
+date_updated: "{{date_updated}}"
 tags:
+  - ai
   - concept
-aliases: []
 ---
 
-# {{concept}}
+# {{title}}
 
-## 定義
+## 基本資訊
 
-{{definition}}
+- 研究主題：{{research_topic}}
+- 關鍵字：{{keywords_text}}
 
-## 為什麼重要
+## 概念概要
 
-{{importance}}
+{{summary}}
 
-## 適用領域
+## 定義與核心概念
 
-- {{domain}}
+{{definition_and_core_ideas}}
 
-## 核心原理
+## 技術原理
 
-{{core_principles}}
+{{technical_principles}}
 
-## 常見應用
+## 常見方法與實作方式
 
-- {{application_1}}
-- {{application_2}}
-- {{application_3}}
+{{common_methods_and_implementations}}
 
-## 優點
+## 適用情境
 
-- {{advantage_1}}
-- {{advantage_2}}
-- {{advantage_3}}
+{{use_cases}}
 
-## 限制與風險
+## 優點與限制
 
-- {{limitation_1}}
-- {{limitation_2}}
-- {{limitation_3}}
+{{advantages_and_limitations}}
 
-## 出現在哪些內容
+## 與相關概念的差異
 
-- [[{{related_content}}]]
+{{differences_from_related_concepts}}
 
-## 相關 Papers
+## 相關研究成果
 
-- [[{{related_paper}}]]
+{{related_research}}
 
-## 相關 Tools / Projects
+## 相關工具與專案
 
-- [[{{related_tool_or_project}}]]
+{{related_tools_and_projects}}
 
-## 相關概念
+## 相關人物
 
-- [[{{related_concept}}]]
+{{related_people}}
 
-## 參考來源
+## 維護紀錄
 
-- [{{source_title}}]({{source_url}})
+- 收錄日期：{{date_collected}}
+- 最後更新：{{date_updated}}
 
-## 更新紀錄
+### 更新紀錄
 
-- {{date}}：{{update_summary}}
+{{update_history}}
