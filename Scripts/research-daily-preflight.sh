@@ -1,107 +1,136 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# research-daily-preflight.sh
-# Preflight checks for research-daily workflow (dual-repo architecture)
-
 ROOT="/home/local/AI-Agent-Lab"
 WEB_ROOT="/home/local/AI-Research-Garden"
 WEB_CONTENT="$WEB_ROOT/content"
-DATE="$(date +%F)"
+DATE="${1:-$(date +%F)}"
 STAGE="$ROOT/.openclaw-stage/research-daily-$DATE"
 
-# 1. 確認必要目錄存在
-echo "===== Checking required directories ====="
-for d in "$ROOT" "$WEB_ROOT" "$WEB_ROOT/.git" "$WEB_CONTENT"; do
-  if [ ! -d "$d" ]; then
-    echo "ERROR: Missing required directory: $d" >&2
-    exit 1
-  fi
-  echo "✅ $d exists"
-done
-
-# 2. 建立當日 staging（處理衝突）
-echo "===== Creating staging directory ====="
-if [ -d "$STAGE" ]; then
-  NEW_STAGE="$STAGE-retry-$(date +%H%M%S)"
-  mv "$STAGE" "$NEW_STAGE"
-  echo "Existing staging moved to $NEW_STAGE"
-fi
-mkdir -p "$STAGE"/{Daily,Papers,Tools,Projects,Concepts,People,Assets}
-echo "Staging created: $STAGE"
-
-# 3. 清理舊的 retry staging（保留當日 main staging）
-echo "===== Cleaning old retry staging ====="
-find "$ROOT/.openclaw-stage" -maxdepth 1 -type d -name 'research-daily-*-retry-*' 2>/dev/null | while IFS= read -r old_stage; do
-  if [[ "$old_stage" != "$STAGE-retry-"* ]]; then
-    echo "🧹 Cleaning up old retry staging: $old_stage"
-    rm -rf "$old_stage"
-  fi
-done
-
-# 4. 檢查 Web Repository 是否有未完成的操作
-echo "===== Checking Web Repository state ====="
-cd "$WEB_ROOT"
-if git status | grep -qE '(merging|rebasing|cherry-picking)'; then
-  echo "ERROR: Web repository has incomplete merge/rebase/cherry-pick" >&2
+fail() {
+  echo "ERROR: $*" >&2
   exit 1
+}
+
+[[ "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] ||
+  fail "Invalid date: $DATE"
+
+echo "===== Checking repositories ====="
+
+for dir in \
+  "$ROOT" \
+  "$ROOT/.git" \
+  "$ROOT/Templates" \
+  "$ROOT/Scripts" \
+  "$WEB_ROOT" \
+  "$WEB_ROOT/.git" \
+  "$WEB_CONTENT"
+do
+  [ -d "$dir" ] || fail "Missing directory: $dir"
+  echo "OK: $dir"
+done
+
+echo "===== Checking templates ====="
+
+templates=(
+  Daily.md
+  Paper.md
+  Report.md
+  Tool.md
+  Project.md
+  TechnicalDevelopment.md
+  Application.md
+  Concept.md
+  Person.md
+)
+
+for template in "${templates[@]}"; do
+  file="$ROOT/Templates/$template"
+  [ -s "$file" ] || fail "Missing or empty template: $file"
+  echo "OK: $file"
+done
+
+echo "===== Checking required commands ====="
+
+for command_name in git rsync node npm npx python3; do
+  command -v "$command_name" >/dev/null 2>&1 ||
+    fail "Required command unavailable: $command_name"
+  echo "OK: $command_name"
+done
+
+echo "===== Checking repository state ====="
+
+if git -C "$WEB_ROOT" status |
+  grep -qE '(merging|rebasing|cherry-picking)'; then
+  fail "Quartz repository has an incomplete Git operation"
 fi
 
-# 檢查是否有人工未提交變更
-dirty_web="$(git status --short || true)"
+dirty_web="$(git -C "$WEB_ROOT" status --short || true)"
+
 if [ -n "$dirty_web" ]; then
-  echo "WARNING: Web repository has uncommitted changes:"
   echo "$dirty_web"
-  echo "Stopping auto-publish to avoid overwriting manual changes." >&2
-  exit 1
+  fail "Quartz repository contains uncommitted changes"
 fi
-echo "✅ Web repository clean"
 
-# 5. 檢查必要工具
-echo "===== Checking required tools ====="
-for tool in git rsync node npm npx; do
-  if ! command -v "$tool" >/dev/null 2>&1; then
-    echo "ERROR: Required tool not found: $tool" >&2
-    exit 1
-  fi
-  echo "✅ $tool available"
+current_branch="$(git -C "$WEB_ROOT" branch --show-current)"
+
+[ "$current_branch" = "v5" ] ||
+  fail "Quartz repository must be on branch v5; current: $current_branch"
+
+echo "===== Preparing staging ====="
+
+if [ -d "$STAGE" ]; then
+  retry_stage="$STAGE-retry-$(date +%H%M%S)"
+  mv "$STAGE" "$retry_stage"
+  echo "Previous staging moved to: $retry_stage"
+fi
+
+for dir in \
+  Daily \
+  Papers \
+  Reports \
+  Tools \
+  Projects \
+  TechnicalDevelopments \
+  Applications \
+  Concepts \
+  People \
+  Assets
+do
+  mkdir -p "$STAGE/$dir"
 done
 
-# 6. 確認 AI-Agent-Lab/Home.md 仍存在
-if [ ! -f "$ROOT/Home.md" ]; then
-  echo "ERROR: $ROOT/Home.md missing" >&2
-  exit 1
-fi
-echo "✅ $ROOT/Home.md exists"
+find "$ROOT/.openclaw-stage" \
+  -maxdepth 1 \
+  -type d \
+  -name 'research-daily-*-retry-*' \
+  -mtime +2 \
+  -exec rm -rf -- {} + 2>/dev/null || true
 
-# 7. 確認 AI-Agent-Lab/Templates/ 仍存在且可讀取
-if [ ! -d "$ROOT/Templates" ] || [ ! -r "$ROOT/Templates" ]; then
-  echo "ERROR: $ROOT/Templates missing or not readable" >&2
-  exit 1
-fi
-echo "✅ $ROOT/Templates exists and readable"
-
-# 8. Initialize RUNLOG.md
-cat > "$STAGE/RUNLOG.md" <<RUNEOF
+cat > "$STAGE/RUNLOG.md" <<RUNLOG
 # Research Daily Run Log — $DATE
 
-## Phase 0: Preflight [$(date -Iseconds)]
+## Phase 0: Preflight
+
+- Timestamp: $(date --iso-8601=seconds)
 - AI-Agent-Lab: $ROOT
 - AI-Research-Garden: $WEB_ROOT
-- Web Content: $WEB_CONTENT
 - Staging: $STAGE
-- Git commit (AI-Agent-Lab): $(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo 'unknown')
-- Git commit (AI-Research-Garden): $(git -C "$WEB_ROOT" rev-parse HEAD 2>/dev/null || echo 'unknown')
-- Preflight: PASS
-RUNEOF
+- AI-Agent-Lab commit: $(git -C "$ROOT" rev-parse HEAD)
+- AI-Research-Garden commit: $(git -C "$WEB_ROOT" rev-parse HEAD)
+- Result: PASS
+RUNLOG
 
-# 9. Verify web_search availability (tavily)
-if [ -n "${TAVILY_API_KEY:-}" ] || command -v web_search >/dev/null 2>&1; then
-  echo "✅ web_search available"
-  echo "- web_search: available" >> "$STAGE/RUNLOG.md"
-else
-  echo "⚠️  web_search unavailable, degraded mode"
-  echo "- Degraded: web_search unavailable" >> "$STAGE/RUNLOG.md"
-fi
+cat > "$STAGE/STATUS.md" <<STATUS
+phase: 0
+status: OK
+date: $DATE
+updated_at: $(date --iso-8601=seconds)
+next_phase: 1
+STATUS
 
-echo "Preflight complete. Staging: $STAGE"
+test -s "$STAGE/RUNLOG.md"
+test -s "$STAGE/STATUS.md"
+
+echo "PREFLIGHT_OK"
+echo "STAGE=$STAGE"

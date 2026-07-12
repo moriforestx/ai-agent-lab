@@ -1,83 +1,80 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-WEB_REPO="/home/local/AI-Research-Garden"
-CONTENT_DIR="$WEB_REPO/content"
-TODAY="$(date +%F)"
+WEB_ROOT="/home/local/AI-Research-Garden"
+CONTENT_DIR="$WEB_ROOT/content"
+DATE="${1:-$(date +%F)}"
 
-echo "===== Research web publish started: $TODAY ====="
-
-if [[ ! -d "$WEB_REPO/.git" ]]; then
-  echo "錯誤：找不到 Web Git repository：$WEB_REPO" >&2
+fail() {
+  echo "ERROR: $*" >&2
   exit 1
-fi
+}
 
-if [[ ! -d "$CONTENT_DIR" ]]; then
-  echo "錯誤：找不到 Quartz content 目錄：$CONTENT_DIR" >&2
-  exit 1
-fi
+[[ "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] ||
+  fail "Invalid date: $DATE"
 
-# 確認目前 branch
-cd "$WEB_REPO"
-CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-echo "Current branch: $CURRENT_BRANCH"
+[ -d "$WEB_ROOT/.git" ] ||
+  fail "Quartz Git repository missing: $WEB_ROOT"
 
-# 確認 origin 存在
-if ! git remote get-url origin >/dev/null 2>&1; then
-  echo "錯誤：找不到 origin remote" >&2
-  exit 1
-fi
-ORIGIN_URL="$(git remote get-url origin)"
-echo "Origin: $ORIGIN_URL"
+[ -d "$CONTENT_DIR" ] ||
+  fail "Quartz content directory missing: $CONTENT_DIR"
 
-echo "===== Checking sensitive information ====="
+cd "$WEB_ROOT"
 
-# 敏感資訊掃描模式（降低誤判）
-PATTERN='(github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{36,}|sk-[A-Za-z0-9_-]{20,}|Bearer[[:space:]]+[A-Za-z0-9._-]{20,}|bot[0-9]+:[A-Za-z0-9_-]{20,}|OPENROUTER_API_KEY[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|TELEGRAM_BOT_TOKEN[[:space:]]*[:=][[:space:]]*[0-9]+:[A-Za-z0-9_-]{20,}|GITHUB_TOKEN[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,})[[:space:]]*'
+branch="$(git branch --show-current)"
+
+[ "$branch" = "v5" ] ||
+  fail "Expected branch v5, current branch: $branch"
+
+git remote get-url origin >/dev/null 2>&1 ||
+  fail "Git remote origin is missing"
+
+echo "===== Sensitive-data scan ====="
+
+pattern='(github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{36,}|sk-[A-Za-z0-9_-]{20,}|Bearer[[:space:]]+[A-Za-z0-9._-]{20,}|bot[0-9]+:[A-Za-z0-9_-]{20,}|OPENROUTER_API_KEY[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|TAVILY_API_KEY[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|TELEGRAM_BOT_TOKEN[[:space:]]*[:=][[:space:]]*[0-9]+:[A-Za-z0-9_-]{20,}|GITHUB_TOKEN[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,})'
 
 if grep -RInE \
-  --exclude-dir=".git" \
-  --exclude-dir=".obsidian" \
-  --exclude-dir="Templates" \
-  "$PATTERN" \
-  "$CONTENT_DIR"; then
-  echo "錯誤：公開內容中疑似含有 API Key 或 Token，停止發布。" >&2
-  exit 1
+  --exclude-dir='.git' \
+  --exclude-dir='.obsidian' \
+  "$pattern" \
+  "$CONTENT_DIR"
+then
+  fail "Possible secret detected in public content"
 fi
 
-echo "===== Validating Quartz build ====="
+echo "===== Quartz build ====="
 
 npx quartz build
-BUILD_EXIT=$?
-if [ $BUILD_EXIT -ne 0 ]; then
-  echo "Quartz build 失敗，停止發布。" >&2
-  exit $BUILD_EXIT
-fi
 
-echo "===== Preparing Git commit ====="
+echo "===== Git commit ====="
 
-# 只提交正式網站內容，避免意外提交 Quartz 暫存、log、設定或 secrets
 git add content/
 
 if git diff --cached --quiet; then
-  echo "沒有新的研究內容，不需要 commit。"
+  echo "NO_CONTENT_CHANGES"
+  echo "PROMOTE_AND_PUSH_OK"
+  echo "COMMIT=$(git rev-parse HEAD)"
   exit 0
 fi
 
-# Conventional Commits 格式
-git commit -m "docs(research): publish research for $TODAY"
-COMMIT_HASH="$(git rev-parse HEAD)"
-echo "Commit: $COMMIT_HASH"
+git commit -m "docs(research): publish research for $DATE"
 
-git push origin HEAD
-PUSH_EXIT=$?
-if [ $PUSH_EXIT -ne 0 ]; then
-  echo "Git push 失敗" >&2
-  exit $PUSH_EXIT
-fi
+commit_hash="$(git rev-parse HEAD)"
 
-echo "===== Research web publish completed ====="
-echo "Build: SUCCESS"
-echo "Commit: $COMMIT_HASH"
-echo "Push: SUCCESS"
-echo "GitHub Actions 將由 push 自動觸發"
+git push origin HEAD:v5
+
+remote_hash="$(
+  git ls-remote origin refs/heads/v5 |
+  awk '{print $1}'
+)"
+
+[ -n "$remote_hash" ] ||
+  fail "Unable to read remote v5 HEAD"
+
+[ "$commit_hash" = "$remote_hash" ] ||
+  fail "Remote v5 HEAD does not match local commit"
+
+echo "BUILD_OK"
+echo "PUSH_OK"
+echo "PROMOTE_AND_PUSH_OK"
+echo "COMMIT=$commit_hash"
