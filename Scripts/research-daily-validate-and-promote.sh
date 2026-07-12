@@ -462,7 +462,7 @@ impact_count="$(
   fail "Daily practical-impact count mismatch"
 
 link_count="$(
-  grep -cE '^- 🗂 知識庫連結：\[\[[^][]]+\]\]$' "$DAILY" ||
+  grep -cE '^- 🗂 知識庫連結：\[\[.+\]\]$' "$DAILY" ||
   true
 )"
 
