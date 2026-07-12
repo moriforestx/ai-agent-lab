@@ -72,7 +72,7 @@ tags:
 - 🌍 應用情境與實務影響：{{audio_speech_practical_impact}}
 - 🗂 知識庫連結：{{audio_speech_knowledge_base_link}}
 
-## AI Agent / AI Agents
+## AI 代理人 / AI Agents
 
 ### {{ai_agents_title}}
 
