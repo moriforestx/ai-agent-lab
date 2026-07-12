@@ -370,8 +370,8 @@ Daily 主要項目的時間限制：
 # 7. 搜尋節流
 
 1. 六個研究主題各至少執行一次搜尋。
-2. 總搜尋次數原則上不得超過 8 次。
-3. 最多保留 2 次補救搜尋。
+2. 總搜尋次數最多 12 次。
+3. 最多保留 6 次補救搜尋。
 4. 每次 `web_search` 後必須透過 `exec` 執行：
 
        sleep 10 && echo SEARCH_THROTTLE_OK
@@ -1471,6 +1471,377 @@ Phase 4 未成功時，不得出現：
 26. RUNLOG 沒有虛構成功紀錄或未來時間。
 27. staging 內部紀錄未進入正式 content。
 28. Quartz Repository 產生實際 commit。
+
+
+# 27. 執行可靠性與搜尋完整性補充規則
+
+本節優先於前文所有衝突規則。若本節與前文不一致，以本節為準。
+
+## 27.1 工具使用與實際執行
+
+1. 執行期間必須優先使用 `exec` 完成：
+   - 檔案讀取
+   - 檔案寫入
+   - 目錄與檔案檢查
+   - STATUS 與 RUNLOG 更新
+   - shell script 執行
+   - Git 狀態確認
+
+2. 不得因缺少名為 `read`、`write` 或其他特定名稱的工具而停止。
+
+3. 只要 `exec` 可用，就必須使用以下 shell 工具完成工作：
+
+       cat
+       sed
+       grep
+       find
+       test
+       awk
+       heredoc
+
+4. 呼叫 `exec` 時必須提供實際且非空白的 command。
+
+5. 工具呼叫失敗時，必須：
+   - 讀取實際錯誤訊息
+   - 修正工具名稱、參數或 command 格式
+   - 再重試一次
+
+6. 同一 Phase 發生兩次相同工具錯誤時：
+   - STATUS 使用 `FAIL` 或 `BLOCKED`
+   - `next_phase: NONE`
+   - 回報實際錯誤
+   - 不得宣稱完成
+
+7. 不得要求人工確認可透過 `exec` 自行檢查的檔案、目錄、STATUS 或 Git 狀態。
+
+## 27.2 禁止未完成式回報
+
+以下文字不得作為 Phase 成功證據：
+
+- 已觸發
+- 將執行
+- 稍後完成
+- 等待結果
+- check GitHub later
+- validation script has been triggered
+- it will validate
+- it will promote
+- Telegram summary will be sent later
+
+每個 Phase 只有在以下條件全部成立後，才可回報成功：
+
+1. 實際 command 已執行。
+2. command 已結束。
+3. 已取得實際 exit code。
+4. 已檢查 stdout 與 stderr。
+5. 已驗證磁碟檔案或 Git 結果。
+6. STATUS 已實際寫入磁碟。
+
+## 27.3 Phase 強制閘門
+
+### Phase 1 → Phase 2
+
+只有以下條件成立才可進入 Phase 2：
+
+- `search-results.md` 存在且非空
+- `rejected-items.md` 存在且非空
+- `search-results.md` 包含可驗證 URL
+- 六個研究主題都已執行初始搜尋
+- 所有缺口主題都已執行補救搜尋或完成候選排除紀錄
+
+必須透過 `exec` 實際執行：
+
+    test -s "$STAGE/search-results.md"
+    test -s "$STAGE/rejected-items.md"
+    grep -Eq 'https?://' "$STAGE/search-results.md"
+
+上述命令未取得 exit code 0，不得回報 Phase 1 OK。
+
+### Phase 2 → Phase 3
+
+Phase 2 必須依序完成：
+
+1. 透過 `exec` 讀取：
+   - `$STAGE/search-results.md`
+   - `$STAGE/rejected-items.md`
+   - `$TEMPLATE_ROOT/Daily.md`
+   - 所有即將使用的長期頁面 Template
+
+2. 檢查正式知識庫並完成去重。
+
+3. 確定每個有效項目的：
+   - 內容類型
+   - 長期頁面類型
+   - 正確目錄
+   - 實際檔名
+
+4. 先建立或更新長期頁面。
+
+5. 每個長期頁面建立後立即執行：
+
+       test -s "$FILE"
+
+6. 再建立 Daily。
+
+7. 檢查每個 Daily Wiki Link 對應：
+   - staging 中實際存在的檔案，或
+   - 正式知識庫中實際存在的檔案
+
+8. 確認 Daily 目錄中只有 Daily 檔案，不得放入：
+   - Paper
+   - Report
+   - Tool
+   - Project
+   - Technical Development
+   - Application
+   - Concept
+   - Person
+
+9. 確認沒有：
+   - `{{...}}`
+   - `[[...]]`
+   - 本機絕對路徑
+   - `N/A`
+   - `TBD`
+   - `None`
+   - 無效內容類型
+
+10. 實際覆寫 STATUS 為：
+
+        phase: 2
+        status: OK
+        date: YYYY-MM-DD
+        updated_at: <實際 ISO 8601 時間>
+        next_phase: 3
+
+Phase 2 未完成以上項目前，禁止執行 validation、promote、commit 或 push。
+
+### Phase 3 → Phase 4
+
+Phase 3 必須實際完成 staging 本機檢查。
+
+若任何檢查失敗：
+
+- STATUS 使用 `FAIL`
+- `next_phase: NONE`
+- 不得進入 Phase 4
+
+### Phase 4 完成條件
+
+Phase 4 必須同步等待 validation script 完整執行結束。
+
+只有以下條件全部成立才可回報 Phase 4 OK：
+
+- validation script exit code 為 0
+- 輸出包含 `VALIDATION_OK`
+- 輸出包含 `PROMOTE_AND_PUSH_OK`
+- 正式 Daily 存在且非空
+- Quartz Repository 產生實際 commit
+- 本機 v5 HEAD 與遠端 v5 HEAD 相同
+
+## 27.4 搜尋額度與候選池
+
+1. 六個主題各至少執行一次初始搜尋。
+2. 總搜尋次數最多 12 次。
+3. 前 6 次用於六個主題的初始搜尋。
+4. 後 6 次用於：
+   - 補救搜尋
+   - 官方來源確認
+   - 日期驗證
+   - 去重後候選替換
+   - 缺少內容類型時的定向搜尋
+
+5. 搜尋額度尚未用完時，不得因初始搜尋結果不足而提早結束 Phase 1。
+
+6. 不得找到第一個候選後就停止該主題的候選整理。
+
+## 27.5 每個主題的候選池
+
+每個研究主題原則上應建立 2–4 個候選。
+
+每個候選至少記錄：
+
+- 標題
+- 研究主題
+- 原始來源 URL
+- 來源類型
+- 可驗證發布日期
+- 是否在最近 3 個月
+- 是否在最近 6 個月
+- 初步 Daily 內容類型
+- 初步長期頁面類型
+- 是否為主要候選或備選候選
+- 是否可能重複
+- 是否有足夠技術內容
+- 可能排除原因
+
+`search-results.md` 必須區分：
+
+- 已接受候選
+- 備選候選
+- 已排除候選
+
+主要候選不合格時，必須先評估備選候選，不得直接形成缺口。
+
+## 27.6 候選替換順序
+
+主要候選因過期、重複、來源不足或分類錯誤而失敗時，依序使用：
+
+1. 同一搜尋結果中的第二候選
+2. 同一主題的其他備選候選
+3. 官方網站
+4. 官方技術部落格
+5. 官方 Repository
+6. 官方文件或 release notes
+7. arXiv、conference、journal 或正式報告
+8. 最近 3 個月的其他候選
+9. 最近 6 個月的其他候選
+
+只有所有合理候選都被排除後，才允許形成缺口。
+
+## 27.7 補救搜尋查詢
+
+補救搜尋不得只重複原查詢。
+
+應改用：
+
+- 同義詞
+- 正式英文技術名稱
+- `site:` 官方網域
+- `arxiv`
+- `GitHub`
+- `release`
+- `benchmark`
+- `technical report`
+- `case study`
+- `deployment`
+- 當前年份
+
+AI 代理人可使用：
+
+- AI agent evaluation 2026
+- tool use agents 2026
+- multi-agent systems arxiv 2026
+- coding agent benchmark 2026
+- agent memory official release 2026
+- autonomous agent framework GitHub 2026
+
+AI 應用與部署可使用：
+
+- production AI deployment case study 2026
+- LLM inference optimization 2026
+- enterprise AI deployment official
+- MLOps LLMOps 2026
+- edge AI deployment 2026
+- AI latency cost optimization official
+
+工具與專案不足時可使用：
+
+- AI open source release 2026 GitHub
+- machine learning framework release 2026
+- LLM developer tool GitHub 2026
+- computer vision tool release 2026
+- speech AI toolkit GitHub 2026
+
+技術動態與落地不足時可使用：
+
+- AI API technical update 2026
+- model serving update 2026
+- AI production architecture case study
+- inference infrastructure release 2026
+- AI security technical update 2026
+
+## 27.8 缺口控制
+
+正常目標為六個主題各一項，共 6 個有效項目。
+
+- 1 個缺口：必須完成該主題補救搜尋。
+- 2 個缺口：必須至少執行 2 次額外補救搜尋。
+- 3 個以上缺口：搜尋額度尚未耗盡時，禁止結束 Phase 1。
+
+每個缺口主題原則上至少評估 2 個不同候選。
+
+若無法取得第二候選，必須在 `rejected-items.md` 記錄：
+
+- 已使用的搜尋查詢
+- 已檢查的來源
+- 無法取得第二候選的原因
+
+不得以低品質、重複、過期、無日期或錯誤分類內容補位。
+
+## 27.9 三種內容類型的補足策略
+
+每日仍以以下三種內容類型各至少一項為強目標：
+
+- 研究成果 / Research
+- 工具與專案 / Tools & Projects
+- 技術動態與落地 / Technical Developments & Applications
+
+Phase 1 初步候選若全部集中在同一內容類型，必須使用補救搜尋額度定向尋找其他內容類型。
+
+例如全部都是 Paper 時，至少執行：
+
+- 一次工具或專案定向搜尋
+- 一次技術動態、部署或應用案例定向搜尋
+
+不得僅因 Paper 較容易找到，就停止工具、專案、技術動態或應用內容的搜尋。
+
+配比仍不是硬性湊數條件；品質、日期、來源、去重與分類要求不得放寬。
+
+## 27.10 Concept 建立目標
+
+每日強目標為建立或更新 1–3 個 Concept。
+
+Concept 候選優先來自當日已接受項目的：
+
+- 核心方法
+- 重要架構
+- Benchmark
+- 訓練技術
+- 推論技術
+- 資料表示方法
+- 評估方法
+- 部署技術
+- 安全或治理概念
+
+建立前必須檢查正式 `Concepts/`，避免：
+
+- 同義重複
+- 大小寫不同的重複
+- 單複數不同的重複
+- 過度專屬且無獨立知識價值的頁面
+
+Concept 可以為 0 的情況：
+
+- 當日所有核心概念都已存在
+- 所有候選都缺乏獨立長期價值
+- 原始來源不足以建立可靠內容
+
+若建立或更新 0 個 Concept，必須在 `rejected-items.md` 記錄：
+
+- 已評估的 Concept 候選
+- 對應來源
+- 是否已存在
+- 未建立原因
+
+不得為達成數量而建立空泛、重複或內容不足的 Concept。
+
+## 27.11 最終額外成功條件
+
+除前文條件外，以下也必須成立：
+
+1. 每個缺口主題已完成候選替換與補救搜尋。
+2. 搜尋額度尚未用完時，沒有提早結束 Phase 1。
+3. Phase 2 已實際建立 Daily 與所有必要長期頁面。
+4. Daily 目錄沒有誤放的長期頁面。
+5. 每個有效 Daily 項目都有實際存在的長期頁面 Wiki Link。
+6. 已評估至少 1 個 Concept 候選。
+7. 若 Concept 為 0，已在 `rejected-items.md` 記錄原因。
+8. 不存在只「觸發」但未等待完成的 Phase。
+9. Phase 4 已取得實際 exit code。
+10. Phase 4 已確認 `PROMOTE_AND_PUSH_OK`。
+11. Phase 4 已確認本機與遠端 v5 HEAD 相同。
+
 
 任一必要條件不成立，必須回報失敗，不得宣稱任務完成。
 EOF
