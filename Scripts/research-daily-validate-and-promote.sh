@@ -254,6 +254,63 @@ validate_content_file() {
   fi
 }
 
+
+update_homepage_latest_research() {
+  local home="$WEB_CONTENT/index.md"
+  local latest_daily
+
+  [ -f "$home" ] ||
+    fail "homepage missing: $home"
+
+  latest_daily="$(
+    find "$WEB_CONTENT/Daily" \
+      -maxdepth 1 \
+      -type f \
+      -name '????-??-??.md' \
+      -printf '%f\n' |
+    sed 's/\.md$//' |
+    LC_ALL=C sort -r |
+    head -n 1
+  )"
+
+  [ -n "$latest_daily" ] ||
+    fail "cannot determine latest Daily page"
+
+  python3 - "$home" "$latest_daily" <<'PY_UPDATE_HOME'
+from pathlib import Path
+import sys
+
+home = Path(sys.argv[1])
+latest = sys.argv[2]
+
+lines = home.read_text(encoding="utf-8").splitlines()
+
+try:
+    start = lines.index("## 最新研究")
+except ValueError:
+    raise SystemExit("ERROR: homepage missing 最新研究 section")
+
+end = len(lines)
+
+for index in range(start + 1, len(lines)):
+    if lines[index].startswith("## "):
+        end = index
+        break
+
+replacement = [
+    "## 最新研究",
+    "",
+    f"- [[Daily/{latest}]]",
+    "",
+]
+
+updated = lines[:start] + replacement + lines[end:]
+home.write_text("\n".join(updated).rstrip() + "\n", encoding="utf-8")
+
+print(f"HOMEPAGE_LATEST_DAILY={latest}")
+PY_UPDATE_HOME
+}
+
 rollback_official_content() {
   echo "Rolling back official content changes..." >&2
 
@@ -418,6 +475,26 @@ grep -Fq '[[' "$DAILY" ||
 
 [ "$(count_md "$STAGE/Concepts")" -ge 3 ] ||
   fail "must stage at least 3 Concepts"
+
+
+prohibited_first_person="$(
+  grep -RInE \
+    '可能影響我|對我的|對我而言|我的研究|我的工作|我可以|我們可以|我們的研究|我們的工作' \
+    "$STAGE/Daily" \
+    "$STAGE/Papers" \
+    "$STAGE/Tools" \
+    "$STAGE/Projects" \
+    "$STAGE/Concepts" \
+    "$STAGE/People" \
+    --include='*.md' \
+    2>/dev/null ||
+  true
+)"
+
+if [ -n "$prohibited_first_person" ]; then
+  echo "$prohibited_first_person"
+  fail "knowledge-base content contains prohibited first-person wording"
+fi
 
 protected_files=(
   "index.md"
@@ -589,6 +666,8 @@ for dir in Daily Papers Tools Projects Concepts People Assets; do
     promoted=1
   fi
 done
+
+update_homepage_latest_research
 
 echo "===== Running Web publish script ====="
 
