@@ -4,26 +4,106 @@ set -euo pipefail
 AI_LAB_ROOT="/home/local/AI-Agent-Lab"
 WEB_ROOT="/home/local/AI-Research-Garden"
 WEB_CONTENT="$WEB_ROOT/content"
+
 STAGE="${1:-}"
 DATE="${2:-$(date +%F)}"
 
+TMP_FILES=()
+
+cleanup() {
+  local file
+
+  for file in "${TMP_FILES[@]:-}"; do
+    if [ -n "$file" ]; then
+      rm -f -- "$file"
+    fi
+  done
+}
+
+trap cleanup EXIT
+
 fail() {
-  echo "ERROR: $*"
+  echo "ERROR: $*" >&2
   exit 1
+}
+
+make_tmp() {
+  local file
+
+  file="$(mktemp)"
+  TMP_FILES+=("$file")
+
+  printf '%s\n' "$file"
 }
 
 count_md() {
   local dir="$1"
+
   if [ ! -d "$dir" ]; then
     echo 0
     return
   fi
-  find "$dir" -maxdepth 1 -type f -name "*.md" | wc -l | tr -d ' '
+
+  find "$dir" \
+    -maxdepth 1 \
+    -type f \
+    -name '*.md' \
+    -printf '.' |
+    wc -c |
+    tr -d ' '
+}
+
+extract_yaml_scalar() {
+  local key="$1"
+  local file="$2"
+
+  sed -nE \
+    "s/^${key}:[[:space:]]*[\"']?([^\"']*)[\"']?[[:space:]]*$/\1/p" \
+    "$file" |
+    head -n 1
+}
+
+has_tag() {
+  local file="$1"
+  local wanted="$2"
+
+  awk -v wanted="$wanted" '
+    BEGIN {
+      in_tags = 0
+      found = 0
+    }
+
+    /^tags:[[:space:]]*$/ {
+      in_tags = 1
+      next
+    }
+
+    in_tags && /^[[:space:]]*-[[:space:]]+/ {
+      tag = $0
+      sub(/^[[:space:]]*-[[:space:]]+/, "", tag)
+      gsub(/^["'\'' ]+|["'\'' ]+$/, "", tag)
+
+      if (tag == wanted) {
+        found = 1
+      }
+
+      next
+    }
+
+    in_tags && /^[^[:space:]]/ {
+      in_tags = 0
+    }
+
+    END {
+      exit(found ? 0 : 1)
+    }
+  ' "$file"
 }
 
 link_exists() {
   local target="$1"
-  local base dir
+  local base
+  local dir
 
   if [[ "$target" == */* ]]; then
     [ -f "$STAGE/$target.md" ] && return 0
@@ -33,98 +113,228 @@ link_exists() {
 
   for base in "$STAGE" "$WEB_CONTENT"; do
     for dir in Daily Papers Tools Projects Concepts People; do
-      [ -f "$base/$dir/$target.md" ] && return 0
+      if [ -f "$base/$dir/$target.md" ]; then
+        return 0
+      fi
     done
   done
 
   return 1
 }
 
-check_duplicates() {
-  local daily="$STAGE/Daily/$DATE.md"
-  local tmpfile="$(mktemp)"
-  
-  # Extract titles and URLs from Daily items
-  grep -E '^### [0-9]+\. ' "$daily" | while IFS= read -r line; do
-    title="${line#### *. }"
-    echo "TITLE:$title" >> "$tmpfile"
-  done
-  
-  grep -E 'Source：https?://' "$daily" | while IFS= read -r line; do
-    url="${line#*Source：}"
-    echo "URL:$url" >> "$tmpfile"
-  done
-  
-  # Check against existing files in WEB_CONTENT
+check_stage_duplicate_against_web() {
+  local staged_file="$1"
+  local rel
+  local staged_title
+  local staged_source
+  local staged_github
+  local staged_arxiv
+
+  local folder
+  local official_file
+  local official_rel
+  local existing_title
+  local existing_source
+  local existing_github
+  local existing_arxiv
+
+  rel="${staged_file#$STAGE/}"
+
+  staged_title="$(extract_yaml_scalar title "$staged_file")"
+  staged_source="$(extract_yaml_scalar source_url "$staged_file")"
+  staged_github="$(extract_yaml_scalar github_url "$staged_file")"
+  staged_arxiv="$(extract_yaml_scalar arxiv "$staged_file")"
+
   for folder in Papers Tools Projects Concepts People; do
-    if [ -d "$WEB_CONTENT/$folder" ]; then
-      while IFS= read -r -d '' file; do
-        existing_title="$(grep -m1 '^title:' "$file" | cut -d'"' -f2)"
-        if [ -n "$existing_title" ]; then
-          if grep -q "^TITLE:$existing_title$" "$tmpfile"; then
-            echo "Duplicate title found: $existing_title (in $WEB_CONTENT/$folder/$(basename "$file"))"
-            rm -f "$tmpfile"
-            return 1
-          fi
-        fi
-        existing_url="$(grep -m1 'source_url:' "$file" | cut -d'"' -f2)"
-        if [ -n "$existing_url" ]; then
-          if grep -q "^URL:$existing_url$" "$tmpfile"; then
-            echo "Duplicate URL found: $existing_url (in $WEB_CONTENT/$folder/$(basename "$file"))"
-            rm -f "$tmpfile"
-            return 1
-          fi
-        fi
-        existing_arxiv="$(grep -m1 'arxiv:' "$file" | cut -d'"' -f2)"
-        if [ -n "$existing_arxiv" ]; then
-          if grep -q "$existing_arxiv" "$tmpfile"; then
-            echo "Duplicate arXiv ID found: $existing_arxiv (in $WEB_CONTENT/$folder/$(basename "$file"))"
-            rm -f "$tmpfile"
-            return 1
-          fi
-        fi
-        existing_github="$(grep -m1 'github.com' "$file" | head -1)"
-        if [ -n "$existing_github" ]; then
-          if grep -q "$existing_github" "$tmpfile"; then
-            echo "Duplicate GitHub URL found: $existing_github (in $WEB_CONTENT/$folder/$(basename "$file"))"
-            rm -f "$tmpfile"
-            return 1
-          fi
-        fi
-      done < <(find "$WEB_CONTENT/$folder" -type f -name "*.md" -print0)
-    fi
+    [ -d "$WEB_CONTENT/$folder" ] || continue
+
+    while IFS= read -r -d '' official_file; do
+      official_rel="${official_file#$WEB_CONTENT/}"
+
+      # 同一路徑代表更新既有頁面，允許覆蓋。
+      if [ "$official_rel" = "$rel" ]; then
+        continue
+      fi
+
+      existing_title="$(extract_yaml_scalar title "$official_file")"
+      existing_source="$(extract_yaml_scalar source_url "$official_file")"
+      existing_github="$(extract_yaml_scalar github_url "$official_file")"
+      existing_arxiv="$(extract_yaml_scalar arxiv "$official_file")"
+
+      if [ -n "$staged_title" ] &&
+         [ -n "$existing_title" ] &&
+         [ "$staged_title" = "$existing_title" ]; then
+        echo "Duplicate title: $staged_title"
+        echo "  staged:   $rel"
+        echo "  existing: $official_rel"
+        return 1
+      fi
+
+      if [ -n "$staged_source" ] &&
+         [ -n "$existing_source" ] &&
+         [ "$staged_source" = "$existing_source" ]; then
+        echo "Duplicate source URL: $staged_source"
+        echo "  staged:   $rel"
+        echo "  existing: $official_rel"
+        return 1
+      fi
+
+      if [ -n "$staged_github" ] &&
+         [ -n "$existing_github" ] &&
+         [ "$staged_github" = "$existing_github" ]; then
+        echo "Duplicate GitHub URL: $staged_github"
+        echo "  staged:   $rel"
+        echo "  existing: $official_rel"
+        return 1
+      fi
+
+      if [ -n "$staged_arxiv" ] &&
+         [ -n "$existing_arxiv" ] &&
+         [ "$staged_arxiv" = "$existing_arxiv" ]; then
+        echo "Duplicate arXiv ID: $staged_arxiv"
+        echo "  staged:   $rel"
+        echo "  existing: $official_rel"
+        return 1
+      fi
+    done < <(
+      find "$WEB_CONTENT/$folder" \
+        -maxdepth 1 \
+        -type f \
+        -name '*.md' \
+        ! -name 'index.md' \
+        -print0
+    )
   done
-  
-  rm -f "$tmpfile"
+
   return 0
 }
 
-[ -n "$STAGE" ] || fail "missing stage directory"
+validate_content_file() {
+  local file="$1"
+  local expected_type="$2"
+
+  shift 2
+
+  local required_tag
+  local actual_type
+  local score
+
+  grep -q '^---[[:space:]]*$' "$file" ||
+    fail "missing YAML frontmatter in $file"
+
+  grep -q '^tags:[[:space:]]*$' "$file" ||
+    fail "missing tags in $file"
+
+  grep -q '^title:[[:space:]]*' "$file" ||
+    fail "missing title in $file"
+
+  if [ "$expected_type" != "concept" ] &&
+     [ "$expected_type" != "person" ]; then
+    grep -q '^source_url:[[:space:]]*' "$file" ||
+      fail "missing source_url in $file"
+  fi
+
+  actual_type="$(extract_yaml_scalar type "$file")"
+
+  [ "$actual_type" = "$expected_type" ] ||
+    fail "wrong type in $file: expected $expected_type, got ${actual_type:-missing}"
+
+  for required_tag in "$@"; do
+    has_tag "$file" "$required_tag" ||
+      fail "missing required tag '$required_tag' in $file"
+  done
+
+  if [ "$expected_type" = "paper" ] ||
+     [ "$expected_type" = "tool" ] ||
+     [ "$expected_type" = "project" ]; then
+    score="$(extract_yaml_scalar score "$file")"
+
+    [[ "$score" =~ ^[1-5]$ ]] ||
+      fail "score must be YAML number 1-5 in $file, got: ${score:-missing}"
+  fi
+}
+
+rollback_official_content() {
+  echo "Rolling back official content changes..." >&2
+
+  git -C "$WEB_ROOT" reset --hard HEAD >/dev/null
+
+  git -C "$WEB_ROOT" clean -fd -- \
+    content/Daily \
+    content/Papers \
+    content/Tools \
+    content/Projects \
+    content/Concepts \
+    content/People \
+    content/Assets >/dev/null
+}
+
+[ -n "$STAGE" ] ||
+  fail "missing stage directory"
 
 case "$STAGE" in
-  "$AI_LAB_ROOT/.openclaw-stage/research-daily-"????-??-??|"$AI_LAB_ROOT/.openclaw-stage/research-daily-"????-??-??/)
+  "$AI_LAB_ROOT/.openclaw-stage/research-daily-"????-??-??)
     ;;
-  ./.openclaw-stage/research-daily-????-??-??|.openclaw-stage/research-daily-????-??-??)
+
+  "$AI_LAB_ROOT/.openclaw-stage/research-daily-"????-??-??/)
+    STAGE="${STAGE%/}"
+    ;;
+
+  ./.openclaw-stage/research-daily-????-??-??)
     STAGE="$AI_LAB_ROOT/${STAGE#./}"
     ;;
+
+  .openclaw-stage/research-daily-????-??-??)
+    STAGE="$AI_LAB_ROOT/$STAGE"
+    ;;
+
   *)
-    fail "invalid stage path. must be: $AI_LAB_ROOT/.openclaw-stage/research-daily-YYYY-MM-DD, got: $STAGE"
+    fail "invalid stage path: $STAGE"
     ;;
 esac
 
-[ -d "$STAGE" ] || fail "stage directory does not exist: $STAGE"
+[[ "$DATE" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] ||
+  fail "invalid date format: $DATE"
 
-# 不允許 .stage-* 目錄存在於 AI-Agent-Lab 根目錄
-if find "$AI_LAB_ROOT" -maxdepth 1 -type d -name '.stage-*' | grep -q .; then
-  find "$AI_LAB_ROOT" -maxdepth 1 -type d -name '.stage-*'
+expected_stage="$AI_LAB_ROOT/.openclaw-stage/research-daily-$DATE"
+
+[ "$STAGE" = "$expected_stage" ] ||
+  fail "stage/date mismatch: expected $expected_stage, got $STAGE"
+
+[ -d "$STAGE" ] ||
+  fail "stage directory does not exist: $STAGE"
+
+if find "$AI_LAB_ROOT" \
+  -maxdepth 1 \
+  -type d \
+  -name '.stage-*' \
+  -print -quit |
+  grep -q .; then
+
+  find "$AI_LAB_ROOT" \
+    -maxdepth 1 \
+    -type d \
+    -name '.stage-*'
+
   fail ".stage-* directories are not allowed in AI-Agent-Lab"
 fi
 
+for dir in Daily Papers Tools Projects Concepts People Assets; do
+  mkdir -p "$WEB_CONTENT/$dir"
+done
+
 cd "$WEB_ROOT"
 
-# 檢查 Web repo 正式內容資料夾是否有未提交變更
 dirty_official="$(
-  git status --short -- content/Daily content/Papers content/Tools content/Projects content/Concepts content/People content/Assets || true
+  git status --short -- \
+    content/Daily \
+    content/Papers \
+    content/Tools \
+    content/Projects \
+    content/Concepts \
+    content/People \
+    content/Assets ||
+    true
 )"
 
 if [ -n "$dirty_official" ]; then
@@ -134,8 +344,11 @@ fi
 
 DAILY="$STAGE/Daily/$DATE.md"
 
-[ -f "$DAILY" ] || fail "Daily file missing: $DAILY"
-[ -s "$DAILY" ] || fail "Daily file is empty: $DAILY"
+[ -f "$DAILY" ] ||
+  fail "Daily file missing: $DAILY"
+
+[ -s "$DAILY" ] ||
+  fail "Daily file is empty: $DAILY"
 
 required_sections=(
   "## 今日總結"
@@ -151,137 +364,271 @@ required_sections=(
 )
 
 for section in "${required_sections[@]}"; do
-  grep -Fq "$section" "$DAILY" || fail "missing Daily section: $section"
+  grep -Fq "$section" "$DAILY" ||
+    fail "missing Daily section: $section"
 done
 
-if grep -R -nE "No relevant data found|無符合|沒有找到|找不到相關|近期無符合" "$DAILY"; then
+grep -q '^tags:[[:space:]]*$' "$DAILY" ||
+  fail "Daily missing tags"
+
+has_tag "$DAILY" "daily-research" ||
+  fail "Daily missing tag: daily-research"
+
+has_tag "$DAILY" "ai-research" ||
+  fail "Daily missing tag: ai-research"
+
+if grep -nE \
+  'No relevant data found|無符合|沒有找到|找不到相關|近期無符合' \
+  "$DAILY"; then
+
   fail "Daily contains empty-category placeholder"
 fi
 
-empty_sources="$(
-  grep -nE 'Source：$|Source：[[:space:]]*$|Source：N/A|Source：無|Source：-|Source：null' "$DAILY" || true
-)"
+if grep -nE \
+  'Source：$|Source：[[:space:]]*$|Source：N/A|Source：無|Source：-|Source：null' \
+  "$DAILY"; then
 
-if [ -n "$empty_sources" ]; then
-  echo "$empty_sources"
   fail "Daily contains empty Source lines"
 fi
 
-source_count="$(grep -cE 'Source：.*https?://' "$DAILY" || true)"
-[ "$source_count" -ge 6 ] || fail "Daily must contain at least 6 source URLs, found: $source_count"
+source_count="$(
+  grep -cE 'Source：.*https?://' "$DAILY" ||
+  true
+)"
 
-score_count="$(grep -cE 'Score：' "$DAILY" || true)"
-[ "$score_count" -ge 6 ] || fail "Daily must contain at least 6 scored items, found: $score_count"
+[ "$source_count" -ge 6 ] ||
+  fail "Daily must contain at least 6 source URLs, found: $source_count"
 
-grep -Fq "[[" "$DAILY" || fail "Daily does not contain Obsidian links"
+score_count="$(
+  grep -cE 'Score：[[:space:]]*[1-5]([[:space:]]|$)' "$DAILY" ||
+  true
+)"
 
-[ "$(count_md "$STAGE/Papers")" -ge 1 ] || fail "must create at least 1 Paper"
-[ "$(count_md "$STAGE/Tools")" -ge 1 ] || fail "must create at least 1 Tool"
-[ "$(count_md "$STAGE/Projects")" -ge 1 ] || fail "must create at least 1 Project"
-[ "$(count_md "$STAGE/Concepts")" -ge 3 ] || fail "must create at least 3 Concepts"
+[ "$score_count" -ge 6 ] ||
+  fail "Daily must contain at least 6 valid scored items, found: $score_count"
+
+grep -Fq '[[' "$DAILY" ||
+  fail "Daily does not contain Wiki links"
+
+[ "$(count_md "$STAGE/Papers")" -ge 1 ] ||
+  fail "must stage at least 1 Paper"
+
+[ "$(count_md "$STAGE/Tools")" -ge 1 ] ||
+  fail "must stage at least 1 Tool"
+
+[ "$(count_md "$STAGE/Concepts")" -ge 3 ] ||
+  fail "must stage at least 3 Concepts"
+
+protected_files=(
+  "index.md"
+  "Daily/index.md"
+  "Papers/index.md"
+  "Tools/index.md"
+  "Projects/index.md"
+  "Concepts/index.md"
+  "People/index.md"
+)
+
+for protected_file in "${protected_files[@]}"; do
+  [ ! -e "$STAGE/$protected_file" ] ||
+    fail "Staging contains protected file: $protected_file"
+done
 
 while IFS= read -r -d '' file; do
   base="$(basename "$file")"
 
   case "$base" in
-    *$\u0027\n'*|*$\u0027\r'*|*\u0027}'*|*\u0027{'*|*/*)
+    *$'\n'*|*$'\r'*|*'{'*|*'}'*)
       fail "invalid filename: $file"
       ;;
   esac
-done < <(find "$STAGE" -type f -print0)
+done < <(
+  find "$STAGE" \
+    -type f \
+    -print0
+)
 
-# Valid tags: daily-research, ai-research, ai, paper, tool, project, concept, people, prompt (no spaces, no #)
 invalid_tags="$(
-  find "$STAGE" -type f -name "*.md" -print0 \
-    | xargs -0 -r grep -nE '^[[:space:]]+-[[:space:]]+(AI Tool|AI Project|AI|Concept|People|#[^[:space:]]+|ai/paper|ai/tool|ai/project)$' || true
+  find \
+    "$STAGE/Daily" \
+    "$STAGE/Papers" \
+    "$STAGE/Tools" \
+    "$STAGE/Projects" \
+    "$STAGE/Concepts" \
+    "$STAGE/People" \
+    -type f \
+    -name '*.md' \
+    -print0 \
+    2>/dev/null |
+  xargs -0 -r grep -nE \
+    '^[[:space:]]*-[[:space:]]+(AI Tool|AI Project|AI|Concept|People|#[^[:space:]]+|ai/paper|ai/tool|ai/project)$' ||
+  true
 )"
 
 if [ -n "$invalid_tags" ]; then
   echo "$invalid_tags"
-  fail "invalid Obsidian tag format. Use: daily-research, ai-research, ai, paper, tool, project, concept, people, prompt (no spaces, no #)"
+  fail "invalid Obsidian tags found"
 fi
 
-for dir in Papers Tools Projects Concepts People; do
-  if [ -d "$STAGE/$dir" ]; then
-    while IFS= read -r -d '' file; do
-      grep -q '^---' "$file" || fail "missing YAML frontmatter in $file"
-      grep -q '^tags:' "$file" || fail "missing tags in $file"
-    done < <(find "$STAGE/$dir" -type f -name "*.md" -print0)
-  fi
-done
+while IFS= read -r -d '' file; do
+  validate_content_file "$file" paper ai paper
 
-missing_links_file="$(mktemp)"
+  check_stage_duplicate_against_web "$file" ||
+    fail "duplicate content detected"
+done < <(
+  find "$STAGE/Papers" \
+    -maxdepth 1 \
+    -type f \
+    -name '*.md' \
+    -print0
+)
 
 while IFS= read -r -d '' file; do
-  grep -o '\[\[[^][]*\]\]' "$file" 2>/dev/null | while IFS= read -r raw; do
+  validate_content_file "$file" tool ai tool
+
+  check_stage_duplicate_against_web "$file" ||
+    fail "duplicate content detected"
+done < <(
+  find "$STAGE/Tools" \
+    -maxdepth 1 \
+    -type f \
+    -name '*.md' \
+    -print0
+)
+
+while IFS= read -r -d '' file; do
+  validate_content_file "$file" project ai project
+
+  check_stage_duplicate_against_web "$file" ||
+    fail "duplicate content detected"
+done < <(
+  find "$STAGE/Projects" \
+    -maxdepth 1 \
+    -type f \
+    -name '*.md' \
+    -print0
+)
+
+while IFS= read -r -d '' file; do
+  validate_content_file "$file" concept concept
+
+  check_stage_duplicate_against_web "$file" ||
+    fail "duplicate content detected"
+done < <(
+  find "$STAGE/Concepts" \
+    -maxdepth 1 \
+    -type f \
+    -name '*.md' \
+    -print0
+)
+
+while IFS= read -r -d '' file; do
+  validate_content_file "$file" person people
+
+  check_stage_duplicate_against_web "$file" ||
+    fail "duplicate content detected"
+done < <(
+  find "$STAGE/People" \
+    -maxdepth 1 \
+    -type f \
+    -name '*.md' \
+    -print0
+)
+
+missing_links_file="$(make_tmp)"
+
+while IFS= read -r -d '' file; do
+  while IFS= read -r raw; do
     target="${raw#\[\[}"
     target="${target%\]\]}"
     target="${target%%|*}"
     target="${target%%#*}"
-    target="$(printf '%s' '$target' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
 
-    [ -n "$target" ] || continue
+    target="$(
+      printf '%s' "$target" |
+      sed 's/^[[:space:]]*//;s/[[:space:]]*$//'
+    )"
+
+    [ -n "$target" ] ||
+      continue
 
     if ! link_exists "$target"; then
       echo "$file -> [[$target]]" >> "$missing_links_file"
     fi
-  done
-done < <(find "$STAGE" -type f -name "*.md" -print0)
+  done < <(
+    grep -o '\[\[[^][]*\]\]' "$file" 2>/dev/null ||
+    true
+  )
+done < <(
+  find \
+    "$STAGE/Daily" \
+    "$STAGE/Papers" \
+    "$STAGE/Tools" \
+    "$STAGE/Projects" \
+    "$STAGE/Concepts" \
+    "$STAGE/People" \
+    -type f \
+    -name '*.md' \
+    -print0 \
+    2>/dev/null
+)
 
 if [ -s "$missing_links_file" ]; then
   cat "$missing_links_file"
-  rm -f "$missing_links_file"
-  fail "Obsidian link target file does not exist"
+  fail "Wiki link target file does not exist"
 fi
 
-rm -f "$missing_links_file"
+promoted=0
 
-# Check duplicates against existing Web Content
-if ! check_duplicates; then
-  fail "Duplicate content detected in Web Repository"
-fi
-
-# Promote to Web Content using rsync -a (preserve history, no --delete)
-promote_list="$(mktemp)"
 for dir in Daily Papers Tools Projects Concepts People Assets; do
   if [ -d "$STAGE/$dir" ]; then
-    rsync -a "$STAGE/$dir/" "$WEB_CONTENT/$dir/"
-    find "$STAGE/$dir" -type f -name "*.md" | while IFS= read -r f; do
-      rel="${f#$STAGE/}"
-      echo "$rel" >> "$promote_list"
-    done
+    rsync -a \
+      "$STAGE/$dir/" \
+      "$WEB_CONTENT/$dir/"
+
+    promoted=1
   fi
 done
 
-# 保護網站控制檔案 - 不可被覆蓋或刪除
-protected_files=(
-  "content/index.md"
-  "content/Daily/index.md"
-  "content/Papers/index.md"
-  "content/Tools/index.md"
-  "content/Projects/index.md"
-  "content/Concepts/index.md"
-  "content/People/index.md"
-)
-
-for pf in "${protected_files[@]}"; do
-  if grep -q "^$pf$" "$promote_list"; then
-    echo "ERROR: Staging contains protected index file: $pf"
-    rm -f "$promote_list"
-    fail "Staging must not contain protected index.md files"
-  fi
-  # 如果被意外覆蓋，從 git 恢復
-  if [ -f "$WEB_ROOT/$pf" ]; then
-    git -C "$WEB_ROOT" checkout HEAD -- "$pf" 2>/dev/null || true
-  fi
-done
-
-rm -f "$promote_list"
-
-# 執行 Web 發布腳本
 echo "===== Running Web publish script ====="
-if ! "$AI_LAB_ROOT/Scripts/publish-research-web.sh"; then
-  fail "Web publish script failed"
+
+set +e
+
+"$AI_LAB_ROOT/Scripts/publish-research-web.sh"
+
+publish_rc=$?
+
+set -e
+
+if [ "$publish_rc" -ne 0 ]; then
+  if [ "$promoted" -eq 1 ]; then
+    rollback_official_content
+  fi
+
+  fail "Web publish script failed with exit code $publish_rc"
 fi
 
+test -s "$WEB_CONTENT/Daily/$DATE.md" ||
+  fail "official Daily missing after publish"
+
+local_head="$(
+  git -C "$WEB_ROOT" rev-parse HEAD
+)"
+
+remote_head="$(
+  git -C "$WEB_ROOT" \
+    ls-remote origin refs/heads/v5 |
+    awk '{print $1}'
+)"
+
+[ -n "$local_head" ] ||
+  fail "cannot resolve local HEAD"
+
+[ -n "$remote_head" ] ||
+  fail "cannot resolve remote v5 HEAD"
+
+[ "$local_head" = "$remote_head" ] ||
+  fail "remote v5 does not contain local HEAD"
+
 echo "PROMOTE_AND_PUSH_OK"
+echo "COMMIT=$local_head"
