@@ -2189,3 +2189,46 @@ cronjob 只允許傳送：
 
 例如「Best Open-Source TTS Models」不得建立成單一 Tool 頁面；應從文章中選出一個符合條件的官方工具，並使用該工具官方 Repository 或官方文件作為主要來源。
 
+
+---
+
+# 30. 路徑解析與工作目錄規則
+
+本節為最高優先級規則。
+
+1. 所有 research-daily 檔案必須使用絕對路徑。
+2. 禁止自行縮寫為：
+   - `daily/YYYY-MM-DD.md`
+   - `Daily/YYYY-MM-DD.md`
+   - `./daily/...`
+   - workspace 相對路徑
+3. staging 根目錄固定為：
+
+       /home/local/AI-Agent-Lab/.openclaw-stage/research-daily-$DATE
+
+4. Daily 目錄名稱固定為大寫：
+
+       Daily
+
+5. Linux 路徑區分大小寫，不得把 `Daily` 改成 `daily`。
+6. 讀取任何檔案前，必須先透過 `exec` 執行：
+
+       pwd
+       printf 'STAGE=%s\n' "$STAGE"
+       test -d "$STAGE"
+       find "$STAGE" -maxdepth 2 -type f -printf '%P\n' | sort
+
+7. 若模型認為檔案不存在，必須先執行：
+
+       test -e "$EXPECTED_PATH"
+       find "$STAGE" -iname "$(basename "$EXPECTED_PATH")" -print
+
+8. 在未取得實際 `test` 或 `find` 結果前，不得宣稱：
+   - file not found
+   - Phase 1 was not executed
+   - file was not generated
+   - path inconsistency
+
+9. 不得根據 workspace 虛擬路徑推測本機檔案不存在。
+10. OpenClaw cronjob 的本機檔案操作一律透過 `exec`，不得使用無法存取本機路徑的虛擬 workspace file reader 取代。
+
