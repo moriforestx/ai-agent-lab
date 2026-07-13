@@ -1845,3 +1845,161 @@ Concept 可以為 0 的情況：
 
 任一必要條件不成立，必須回報失敗，不得宣稱任務完成。
 EOF
+
+---
+
+# 28. Cronjob 無人值守執行規則
+
+本節是最高優先級規則。若與前文衝突，以本節為準。
+
+## 28.1 執行模式
+
+本任務由 cronjob 觸發時，必須視為無人值守執行。
+
+無人值守模式下：
+
+1. 不得詢問使用者是否繼續。
+2. 不得要求使用者審查 staging。
+3. 不得要求人工 Confirmation。
+4. 不得停在 Phase 0、1、2 或 3 等待下一個訊息。
+5. 不得回覆：
+   - Would you like me to run...
+   - Do you want me to continue...
+   - 是否要執行下一階段
+   - 是否需要先審查
+   - awaiting validation
+   - validation script needs to run
+   - Phase 3 and 4 need to run
+6. 若下一階段條件已成立，必須立即使用 `exec` 執行下一階段。
+7. 一次 cronjob 必須連續執行 Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4。
+8. 只有成功完成 Phase 4，或發生不可恢復錯誤時，才可結束回合。
+
+## 28.2 Phase 2 完成後的強制動作
+
+Phase 2 完成且 STATUS 為：
+
+    phase: 2
+    status: OK
+    next_phase: 3
+
+時，Agent 必須立即執行 Phase 3。
+
+不得先輸出 Phase 2 最終摘要。
+
+不得詢問是否執行 validation script。
+
+Phase 3 成功後，必須立即執行：
+
+    bash /home/local/AI-Agent-Lab/Scripts/research-daily-validate-and-promote.sh \
+      "$STAGE" \
+      "$DATE"
+
+必須同步等待 command 結束並取得實際 exit code。
+
+## 28.3 Phase 4 成功判定
+
+只有以下條件全部成立，才可結束 cronjob 並傳送成功摘要：
+
+1. validation script 實際執行完成。
+2. exit code 為 0。
+3. stdout 包含 `VALIDATION_OK`。
+4. stdout 包含 `PROMOTE_AND_PUSH_OK`。
+5. 正式 Daily 存在且非空。
+6. Quartz 本機 HEAD 與遠端 v5 HEAD 一致。
+7. STATUS 已實際覆寫為：
+
+       phase: 4
+       status: OK
+       next_phase: NONE
+
+8. STATUS 包含實際 commit hash。
+
+若 validation、build、commit 或 push 失敗：
+
+1. STATUS 必須寫為：
+
+       phase: 4
+       status: FAIL
+       next_phase: NONE
+
+2. 回報實際 exit code。
+3. 回報第一個明確錯誤。
+4. 不得宣稱 GitHub 已更新。
+5. 不得要求使用者決定是否重試。
+
+## 28.4 中間 Phase 的聊天輸出
+
+cronjob 執行期間不得在 Phase 0、1、2、3 結束時傳送需要使用者回覆的訊息。
+
+中間 Phase 可以寫入 RUNLOG 與 STATUS，但聊天只允許：
+
+- 最終 Phase 4 成功摘要，或
+- 最終失敗摘要
+
+不得使用中間摘要中止執行。
+
+## 28.5 檔案與項目計數一致性
+
+在 Phase 2 結束前，必須實際計算：
+
+- Daily 有效項目數
+- Paper 數量
+- Report 數量
+- Tool 數量
+- Project 數量
+- Technical Development 數量
+- Application 數量
+- Concept 數量
+- Person 數量
+
+必須使用 `find` 與 `wc -l` 取得實際數量，不得由模型自行估算。
+
+Telegram 最終摘要中的每個數量必須與磁碟實際檔案數一致。
+
+例如不得出現：
+
+- 標示 Papers: 5，但實際列出 6 篇
+- item_count: 5，但 Daily 實際有不同數量
+- 摘要列出不存在的檔案
+- 漏列已建立的檔案
+
+## 28.6 Daily 主項目與延伸頁面
+
+每個 Daily 有效項目必須對應至少一個長期頁面。
+
+額外建立的 Concept、Person 或其他延伸頁面可以不占 Daily 主項目名額。
+
+若建立的 Paper、Report、Tool、Project、Technical Development 或 Application 沒有被 Daily 引用，必須符合以下其中一項：
+
+1. 是 Daily 主項目的必要延伸頁面，且有其他長期頁面連結它。
+2. 是既有頁面的重大更新。
+3. 已在 `RUNLOG.md` 說明建立原因。
+
+不得無理由建立與 Daily 無關的主要內容頁面。
+
+## 28.7 最終回報格式
+
+成功時只在 Phase 4 完成後回報：
+
+    PHASE 4 OK
+    - Daily status
+    - Daily item count
+    - Gap count
+    - Actual files created by type
+    - Actual files updated by type
+    - Validation result
+    - Build result
+    - Commit hash
+    - Push verification
+    - Official Daily path
+
+失敗時只回報：
+
+    PHASE <number> FAIL
+    - Actual failed command
+    - Exit code
+    - First actionable error
+    - STATUS path
+    - Log path
+
+不得以問題句結束 cronjob 執行。
