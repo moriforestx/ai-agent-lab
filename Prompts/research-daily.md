@@ -2003,3 +2003,189 @@ Telegram 最終摘要中的每個數量必須與磁碟實際檔案數一致。
     - Log path
 
 不得以問題句結束 cronjob 執行。
+
+---
+
+# 29. 背景程序、工具輸出與結果判定規則
+
+本節為最高優先級規則。
+
+## 29.1 禁止以顯示問題中止
+
+不得因以下理由停止流程或傳送中間摘要：
+
+- tool output display issue
+- output unavailable
+- command may still be running
+- cannot see the final result
+- script is currently running
+- expected result
+- once completed
+- completion will be reported later
+
+工具輸出不可見，不代表允許結束任務。
+
+## 29.2 Command 必須以前景方式執行
+
+validation、build、commit、push 必須以前景同步 command 執行。
+
+禁止使用：
+
+- `&`
+- `nohup`
+- `disown`
+- 未等待完成的背景程序
+- 只啟動 process 而未取得 exit code 的工具呼叫
+
+執行 validation 時必須使用：
+
+    set +e
+    bash "$VALIDATION_SCRIPT" "$STAGE" "$DATE" \
+      >"$LOG" 2>&1
+    rc=$?
+    set -e
+
+    cat "$LOG"
+    echo "EXIT_CODE=$rc"
+
+不得在 `$rc` 尚未取得時結束。
+
+## 29.3 工具輸出不可見時的替代驗證
+
+若工具介面沒有回傳完整 stdout，必須立即透過 `exec` 執行：
+
+    test -s "$LOG"
+    tail -n 200 "$LOG"
+    pgrep -af 'research-daily-validate-and-promote|publish-research-web|quartz build' || true
+    cat "$STAGE/STATUS.md"
+    test -s "$QUARTZ_REPO/content/Daily/$DATE.md"
+    git -C "$QUARTZ_REPO" rev-parse HEAD
+    git -C "$QUARTZ_REPO" ls-remote origin refs/heads/v5
+
+必須根據磁碟與 Git 結果判斷成功或失敗。
+
+不得根據「預期成功」推定成功。
+
+## 29.4 Process 仍在執行時
+
+若 `pgrep` 顯示 validation process 仍存在：
+
+1. 必須等待 15 秒。
+2. 再檢查 process 與 log。
+3. 最多重複 8 次。
+4. 每次等待後都必須重新讀取 log。
+
+使用：
+
+    for attempt in 1 2 3 4 5 6 7 8
+    do
+      if ! pgrep -f 'research-daily-validate-and-promote' >/dev/null
+      then
+        break
+      fi
+
+      sleep 15
+      tail -n 50 "$LOG" || true
+    done
+
+若 120 秒後仍未結束：
+
+- STATUS 使用 `BLOCKED`
+- `next_phase: NONE`
+- 回報 process 與 log
+- 不得宣稱 Phase 4 成功
+
+## 29.5 Phase 4 最終回報硬條件
+
+以下任何一項缺失時，禁止成功摘要：
+
+- 實際 exit code
+- `VALIDATION_OK`
+- `BUILD_OK`
+- `PUSH_OK`
+- `PROMOTE_AND_PUSH_OK`
+- 正式 Daily 檔案
+- Git commit hash
+- 本機與遠端 v5 HEAD 相同
+- STATUS phase 4 OK
+
+不得使用「Expected success criteria」取代實際結果。
+
+## 29.6 Telegram 中間訊息
+
+cronjob 只允許傳送：
+
+1. Phase 4 實際成功摘要；或
+2. 實際 FAIL／BLOCKED 摘要。
+
+不得傳送「流程仍在執行」的中間 Telegram 摘要。
+
+## 29.7 候選來源最低驗證
+
+每個正式候選必須至少具備：
+
+- 可直接開啟的來源 URL
+- 頁面內可驗證標題
+- 頁面內可驗證發布日期
+- 明確作者、機構或 Repository owner
+- 足夠技術內容
+- 與長期頁面類型一致
+
+以下來源不得單獨作為正式項目的主要依據：
+
+- SEO 彙整文章
+- 「Best X in 2026」清單文章
+- 無作者或無發布日期文章
+- 教學網站的概括性指南
+- 搜尋結果摘要
+- 二手轉載
+- 僅有標題但沒有技術細節的頁面
+
+此類來源只能作為線索，必須再找到：
+
+- 官方文件
+- 官方 Repository
+- 原始論文
+- 正式技術報告
+- 官方產品或工程文章
+
+## 29.8 候選池最低數量
+
+每個主題至少必須記錄：
+
+- 1 個主要候選
+- 1 個備選候選
+
+若首次搜尋只找到一個候選，必須進行補救搜尋。
+
+因此，只有 6 次初始搜尋且每個主題都只有一個候選時，禁止進入 Phase 2。
+
+每個正式項目必須在 `search-results.md` 中包含：
+
+- `PRIMARY`
+- 至少一個對應的 `BACKUP`
+
+若沒有備選候選，必須在 `rejected-items.md` 記錄補救搜尋與無法取得備選的原因。
+
+## 29.9 彙整文章分類限制
+
+標題含以下模式的內容：
+
+- Best
+- Top
+- Guide
+- Overview
+- Comparison
+- Trends
+- Landscape
+
+原則上不得直接分類為：
+
+- Tool
+- Research
+- Technical Development
+
+除非頁面本身是該工具、研究或技術的官方原始發布。
+
+例如「Best Open-Source TTS Models」不得建立成單一 Tool 頁面；應從文章中選出一個符合條件的官方工具，並使用該工具官方 Repository 或官方文件作為主要來源。
+
