@@ -52,16 +52,12 @@ git add content/
 
 if git diff --cached --quiet; then
   echo "NO_CONTENT_CHANGES"
-  echo "PROMOTE_AND_PUSH_OK"
-  echo "COMMIT=$(git rev-parse HEAD)"
-  exit 0
+  commit_hash="$(git rev-parse HEAD)"
+else
+  git commit -m "docs(research): publish research for $DATE"
+  commit_hash="$(git rev-parse HEAD)"
+  git push origin HEAD:v5
 fi
-
-git commit -m "docs(research): publish research for $DATE"
-
-commit_hash="$(git rev-parse HEAD)"
-
-git push origin HEAD:v5
 
 remote_hash="$(
   git ls-remote origin refs/heads/v5 |
@@ -75,6 +71,6 @@ remote_hash="$(
   fail "Remote v5 HEAD does not match local commit"
 
 echo "BUILD_OK"
-echo "PUSH_OK"
+echo "REMOTE_VERIFY_OK"
 echo "PROMOTE_AND_PUSH_OK"
 echo "COMMIT=$commit_hash"

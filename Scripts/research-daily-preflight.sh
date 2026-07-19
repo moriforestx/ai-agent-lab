@@ -79,56 +79,15 @@ current_branch="$(git -C "$WEB_ROOT" branch --show-current)"
 
 echo "===== Preparing staging ====="
 
-if [ -d "$STAGE" ]; then
-  retry_stage="$STAGE-retry-$(date +%H%M%S)"
-  mv "$STAGE" "$retry_stage"
-  echo "Previous staging moved to: $retry_stage"
+workflow_output="$(python3 "$ROOT/Scripts/research-daily-workflow.py" init --date "$DATE")"
+echo "$workflow_output"
+
+if [ "$workflow_output" = "ALREADY_COMPLETED" ]; then
+  echo "PREFLIGHT_ALREADY_COMPLETED"
+  exit 0
 fi
 
-for dir in \
-  Daily \
-  Papers \
-  Reports \
-  Tools \
-  Projects \
-  TechnicalDevelopments \
-  Applications \
-  Concepts \
-  People \
-  Assets
-do
-  mkdir -p "$STAGE/$dir"
-done
-
-find "$ROOT/.openclaw-stage" \
-  -maxdepth 1 \
-  -type d \
-  -name 'research-daily-*-retry-*' \
-  -mtime +2 \
-  -exec rm -rf -- {} + 2>/dev/null || true
-
-cat > "$STAGE/RUNLOG.md" <<RUNLOG
-# Research Daily Run Log — $DATE
-
-## Phase 0: Preflight
-
-- Timestamp: $(date --iso-8601=seconds)
-- AI-Agent-Lab: $ROOT
-- AI-Research-Garden: $WEB_ROOT
-- Staging: $STAGE
-- AI-Agent-Lab commit: $(git -C "$ROOT" rev-parse HEAD)
-- AI-Research-Garden commit: $(git -C "$WEB_ROOT" rev-parse HEAD)
-- Result: PASS
-RUNLOG
-
-cat > "$STAGE/STATUS.md" <<STATUS
-phase: 0
-status: OK
-date: $DATE
-updated_at: $(date --iso-8601=seconds)
-next_phase: 1
-STATUS
-
+test -s "$STAGE/research-state.json"
 test -s "$STAGE/RUNLOG.md"
 test -s "$STAGE/STATUS.md"
 

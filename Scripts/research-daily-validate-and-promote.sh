@@ -7,6 +7,7 @@ WEB_CONTENT="$WEB_ROOT/content"
 
 STAGE="${1:-}"
 DATE="${2:-$(date +%F)}"
+MODE="${3:-promote}"
 
 CONTENT_DIRS=(
   Daily
@@ -314,8 +315,18 @@ esac
 [ -d "$STAGE" ] ||
   fail "Stage directory missing: $STAGE"
 
+case "$MODE" in
+  promote|--validate-only)
+    ;;
+  *)
+    fail "Unknown mode: $MODE"
+    ;;
+esac
+
 [ -d "$WEB_ROOT/.git" ] ||
   fail "Quartz Git repository missing"
+
+python3 "$AI_LAB_ROOT/Scripts/research-daily-workflow.py" validate --date "$DATE"
 
 for dir in "${CONTENT_DIRS[@]}"; do
   [ -d "$STAGE/$dir" ] ||
@@ -469,19 +480,32 @@ link_count="$(
 [ "$link_count" -eq "$item_count" ] ||
   fail "Daily knowledge-base link count mismatch"
 
+gap_count="$(
+  grep -cE \
+    '^> 今日未找到符合.+要求的項目。$' \
+    "$DAILY" ||
+  true
+)"
+
 if [ "$daily_status" = "COMPLETED" ]; then
   [ "$item_count" -eq 6 ] ||
     fail "COMPLETED Daily must contain exactly 6 items"
+
+  [ "$gap_count" -eq 0 ] ||
+    fail "COMPLETED Daily must not contain topic gaps"
 fi
 
 if [ "$daily_status" = "COMPLETED_WITH_GAP" ]; then
   [ "$item_count" -lt 6 ] ||
     fail "COMPLETED_WITH_GAP must contain fewer than 6 items"
 
-  grep -Fq \
-    "> 今日未找到符合日期、來源品質、技術內容與去重要求的項目。" \
-    "$DAILY" ||
+  [ "$gap_count" -gt 0 ] ||
     fail "COMPLETED_WITH_GAP requires a visible topic gap notice"
+
+  covered_topic_count=$((item_count + gap_count))
+
+  [ "$covered_topic_count" -eq 6 ] ||
+    fail "COMPLETED_WITH_GAP requires items plus gaps to equal 6 topics"
 
   [ -s "$STAGE/rejected-items.md" ] ||
     fail "COMPLETED_WITH_GAP requires rejected-items.md"
@@ -569,6 +593,11 @@ done < <(
 
 echo "VALIDATION_OK"
 
+if [ "$MODE" = "--validate-only" ]; then
+  echo "VALIDATION_ONLY_OK"
+  exit 0
+fi
+
 ROLLBACK_REQUIRED=1
 
 for dir in "${CONTENT_DIRS[@]}"; do
@@ -580,7 +609,14 @@ done
 
 update_homepage
 
-bash "$AI_LAB_ROOT/Scripts/publish-research-web.sh" "$DATE"
+publish_output="$(bash "$AI_LAB_ROOT/Scripts/publish-research-web.sh" "$DATE")"
+echo "$publish_output"
+
+commit_hash="$(printf '%s\n' "$publish_output" | sed -nE 's/^COMMIT=([0-9a-f]{40})$/\1/p' | tail -n 1)"
+[ -n "$commit_hash" ] || fail "Publish did not return a full commit hash"
+
+python3 "$AI_LAB_ROOT/Scripts/research-daily-workflow.py" \
+  finalize --date "$DATE" --commit "$commit_hash"
 
 ROLLBACK_REQUIRED=0
 
