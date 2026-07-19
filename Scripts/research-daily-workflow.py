@@ -108,13 +108,19 @@ def init(day: str) -> None:
             return
         print("RESUME_READY")
         return
+    legacy_stage = None
     if stage.exists() and any(stage.iterdir()):
-        fail(f"existing stage has no state; retain it for audit: {stage}")
+        # Legacy Markdown-only stages cannot be resumed safely because they do
+        # not contain per-topic outcomes. Preserve, rather than overwrite,
+        # the audit trail and start a canonical structured stage.
+        legacy_stage = stage.with_name(f"{stage.name}.legacy-{datetime.now().strftime('%H%M%S')}")
+        stage.replace(legacy_stage)
     for name in ("Daily", "Papers", "Reports", "Tools", "Projects", "TechnicalDevelopments", "Applications", "Concepts", "People", "Assets", "checkpoints"):
         (stage / name).mkdir(parents=True, exist_ok=True)
     state = initial_state(day)
     save(stage, state)
-    (stage / "RUNLOG.md").write_text(f"# Research Daily Run Log — {day}\n\n- {now()}: initialized structured workflow\n", encoding="utf-8")
+    legacy_note = f"; preserved legacy stage at {legacy_stage.name}" if legacy_stage else ""
+    (stage / "RUNLOG.md").write_text(f"# Research Daily Run Log — {day}\n\n- {now()}: initialized structured workflow{legacy_note}\n", encoding="utf-8")
     write_status(stage, state, "READY")
     print("INITIALIZED")
 
