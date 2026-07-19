@@ -383,6 +383,20 @@ def finalize(day: str, commit: str) -> None:
     print("FINAL_STATUS_COMPLETED")
 
 
+def mark_failed(day: str, reason: str) -> None:
+    if not reason.strip():
+        fail("failure reason is required")
+    stage = stage_for(day)
+    state = load_state(stage)
+    if state["final"].get("status") == "COMPLETED":
+        fail("cannot mark a completed workflow as failed")
+    state["final"] = {"status": "FAILED", "reason": reason.strip(), "failed_at": now()}
+    save(stage, state)
+    append_log(stage, f"workflow failure recorded: {reason.strip()}")
+    write_status(stage, state, "FAILED")
+    print("FINAL_STATUS_FAILED")
+
+
 def write_status(stage: Path, state: dict, status: str) -> None:
     outcomes = {key: value["result"] for key, value in state["topics"].items()}
     text = "\n".join((f"status: {status}", f"date: {state['date']}", f"updated_at: {now()}", f"request_budget: {state['request_budget']['used']}/{state['request_budget']['limit']}", "topics:") + tuple(f"  {key}: {value}" for key, value in outcomes.items()) + (f"final: {state['final']['status']}", ""))
@@ -391,11 +405,12 @@ def write_status(stage: Path, state: dict, status: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=("init", "record", "render", "validate", "finalize"))
+    parser.add_argument("command", choices=("init", "record", "render", "validate", "finalize", "fail"))
     parser.add_argument("--date", default=date.today().isoformat())
     parser.add_argument("--topic")
     parser.add_argument("--candidate")
     parser.add_argument("--commit")
+    parser.add_argument("--reason")
     args = parser.parse_args()
     if args.command == "init": init(args.date)
     elif args.command == "record":
@@ -403,9 +418,12 @@ def main() -> None:
         record(args.date, args.topic, Path(args.candidate))
     elif args.command == "render": render(args.date)
     elif args.command == "validate": validate(args.date)
-    else:
+    elif args.command == "finalize":
         if not args.commit: fail("finalize requires --commit")
         finalize(args.date, args.commit)
+    else:
+        if not args.reason: fail("fail requires --reason")
+        mark_failed(args.date, args.reason)
 
 
 if __name__ == "__main__":
