@@ -54,7 +54,7 @@ Accepted 範例：
 Gap 範例：
 
 ```json
-{"result":"gap","request_count":1,"reason":"已檢查原始來源；沒有同時符合日期、來源品質、技術內容與去重要求的候選。"}
+{"result":"gap","request_count":1,"search_query":"執行過的 Tavily 查詢","searched_urls":["https://example.org/checked-source"],"reason":"已檢查原始來源；沒有同時符合日期、來源品質、技術內容與去重要求的候選。"}
 ```
 
 儲存指令：
@@ -64,7 +64,7 @@ python3 "$ROOT/Scripts/research-daily-workflow.py" record \
   --date "$DATE" --topic "TOPIC_ID" --candidate /tmp/research-daily-TOPIC_ID.json
 ```
 
-若指令輸出 `ALREADY_RECORDED`，該 checkpoint 已安全完成；不可改寫為不同結果。若驗證或搜尋失敗，仍以 `request_count: 0` 記錄帶原因的 `gap`，使 workflow 可恢復且六個 topic 狀態明確。
+若指令輸出 `ALREADY_RECORDED`，該 checkpoint 已安全完成；不可改寫為不同結果。每個 checkpoint 的 `request_count` 必須為 1 或 2；gap 必須包含實際執行過的 `search_query` 與至少一個 `searched_urls`。若 web search 本身失敗，使用 workflow 的 `fail` 指令記錄整體失敗，禁止以未搜尋的 gap 補位。
 
 ## Render and publish
 

@@ -126,11 +126,21 @@ def init(day: str) -> None:
 
 
 def validate_candidate(day: str, topic: str, candidate: dict) -> None:
-    if set(candidate) - {"result", "reason", "request_count", "title", "published_date", "source_url", "content_type", "score", "summary", "key_value", "practical_impact", "details", "organization", "slug"}:
+    if set(candidate) - {"result", "reason", "request_count", "search_query", "searched_urls", "title", "published_date", "source_url", "content_type", "score", "summary", "key_value", "practical_impact", "details", "organization", "slug"}:
         fail("candidate has unsupported fields")
+    request_count = candidate.get("request_count")
+    if not isinstance(request_count, int) or not 1 <= request_count <= 2:
+        fail("request_count must be an integer from 1 to 2")
     if candidate.get("result") == "gap":
         if not isinstance(candidate.get("reason"), str) or not candidate["reason"].strip():
             fail("gap requires a non-empty reason")
+        if "測試" in candidate["reason"] or "test" in candidate["reason"].lower():
+            fail("gap reason must not contain test data")
+        if not isinstance(candidate.get("search_query"), str) or not candidate["search_query"].strip():
+            fail("gap requires the executed search_query")
+        urls = candidate.get("searched_urls")
+        if not isinstance(urls, list) or not urls or not all(isinstance(url, str) and urlparse(url).scheme in {"http", "https"} and urlparse(url).netloc for url in urls):
+            fail("gap requires one or more searched_urls")
         return
     if candidate.get("result") != "accepted":
         fail("candidate result must be accepted or gap")
@@ -168,9 +178,7 @@ def record(day: str, topic: str, candidate_file: Path) -> None:
     if not isinstance(candidate, dict):
         fail("candidate must be a JSON object")
     validate_candidate(day, topic, candidate)
-    request_count = candidate.get("request_count", 1)
-    if not isinstance(request_count, int) or not 0 <= request_count <= 2:
-        fail("request_count must be an integer from 0 to 2")
+    request_count = candidate["request_count"]
     existing = state["topics"][topic]
     if existing["result"] != "pending":
         if existing.get("digest") == hashlib.sha256(json.dumps(candidate, ensure_ascii=False, sort_keys=True).encode()).hexdigest():
@@ -178,7 +186,7 @@ def record(day: str, topic: str, candidate_file: Path) -> None:
             return
         fail(f"topic already finalized: {topic}")
     if state["request_budget"]["used"] + request_count > state["request_budget"]["limit"]:
-        fail("request budget exceeded; record a gap with request_count 0")
+        fail("request budget exceeded")
     digest = hashlib.sha256(json.dumps(candidate, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
     checkpoint = {"schema_version": 1, "topic": topic, "recorded_at": now(), "digest": digest, "candidate": candidate}
     write_json(stage / "checkpoints" / f"{list(TOPIC_NAMES).index(topic) + 1:02d}-{topic}.json", checkpoint)
