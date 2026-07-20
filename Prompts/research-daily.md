@@ -29,6 +29,8 @@ DATE="${1:-$(date +%F)}"
 
 每個 topic 完成後，將下列 JSON 寫入暫時檔，再立即呼叫 `record`；不可跳到下一 topic 才一起寫入。JSON 是唯一的研究 source of truth。
 
+**這是唯一接受的 schema。** 最上層必須有 `result`，且只可為 `accepted` 或 `gap`。不要使用或自行發明 `topic`、`url`、`published_at`、`snapshot`、`date`、`status` 等欄位；它們都會被 validator 拒絕。topic ID 已由 `record --topic` 指定，不能寫進 candidate JSON。
+
 Accepted 範例：
 
 ```json
@@ -56,6 +58,8 @@ Gap 範例：
 ```json
 {"result":"gap","request_count":1,"search_query":"執行過的 Tavily 查詢","searched_urls":["https://example.org/checked-source"],"reason":"已檢查原始來源；沒有同時符合日期、來源品質、技術內容與去重要求的候選。"}
 ```
+
+先以一個 topic 完成此步驟作為範本：搜尋一次、依上述 schema 建立 JSON、呼叫 `record` 並確認輸出，再處理下一個 topic。不可只在回覆中描述 JSON 或計畫建立檔案；必須真的建立檔案並執行 `record`。
 
 儲存指令：
 
