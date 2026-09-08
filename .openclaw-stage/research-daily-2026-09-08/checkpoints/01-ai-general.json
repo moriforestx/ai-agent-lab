@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "topic": "ai-general",
+  "recorded_at": "2026-09-09T06:32:51+08:00",
+  "digest": "2ac717621067ea11fabc866b42b0579151a9f7029258f53a166dba3feb4e323a",
+  "candidate": {
+    "result": "accepted",
+    "request_count": 1,
+    "title": "Introducing Gemini 3.7 Flash",
+    "published_date": "2026-08-13",
+    "source_url": "https://blog.google/innovation-and-ai/models-and-research/gemini-models/introducing-gemini-3-7-flash",
+    "content_type": "technical-development",
+    "score": 4.5,
+    "summary": "Google DeepMind 發布 Gemini 3.7 Flash，定位為 Gemini 3 系列中最智能的工作馬模型，專為編碼與代理工作流優化。此版本在僅三週後跟進 3.6 Flash，透過演算法創新而非新基礎模型，將 DeepSWE 長期編碼基準從 49.0% 提升至 65.3%，並將價格降至原 3.6 Flash 成本的一半（輸入 $0.75/1M、輸出 $3.75/1M，優惠至 2026 年底）。具備 1M token 上下文窗口與 65,536 token 最大輸出。",
+    "key_value": "以演算法創新在三週內實現編碼基準大幅提升 16.3 個百分點，同時將成本減半，展示快速迭代能力。",
+    "practical_impact": "為企業級編碼代理、長期規劃與工具使用工作流提供更高性價比選擇，直接競爭 OpenAI GPT-5.6 Sol 與 Anthropic Claude 中階模型。",
+    "details": "模型 ID 為 gemini-3.7-flash，建立於 Gemini 3.6 Flash 基礎上。官方模型卡片：https://deepmind.google/models/model-cards/gemini-3-7-flash。發布者：Tulsee Doshi（產品管理高級總監，代表 Gemini 團隊）。",
+    "organization": "Google DeepMind",
+    "slug": "gemini-3-7-flash"
+  }
+}

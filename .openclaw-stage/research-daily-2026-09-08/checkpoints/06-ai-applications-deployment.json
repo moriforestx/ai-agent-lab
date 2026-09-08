@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "topic": "ai-applications-deployment",
+  "recorded_at": "2026-09-09T06:38:26+08:00",
+  "digest": "8cef960338bed5f88f58c5150aebe3db7d9fc766e62744fab00c0f7de9ccfb7b",
+  "candidate": {
+    "result": "accepted",
+    "request_count": 1,
+    "title": "Google Cloud Next 2026: Vertex AI Rebranded to Gemini Enterprise Agent Platform",
+    "published_date": "2026-04-23",
+    "source_url": "https://www.hpcwire.com/aiwire/2026/04/23/google-unveils-gemini-enterprise-agent-platform",
+    "content_type": "technical-development",
+    "score": 4.8,
+    "summary": "谷歌在 2026 年 4 月 23 日的 Google Cloud Next 2026 大會上宣布，將 Vertex AI 平台重新品牌化並擴展為 Gemini Enterprise Agent Platform。此舉不只是改名，而是將 Vertex AI、Agentspace 及相關代理工具整合為統一的企業代理平台，提供代理建置、擴展、治理與優化的一站式解決方案。新平台包含 Agent Studio（無碼代理建置工具）、Agent Engine（受管理執行時期）、Agent Garden（預建代理解決方案）以及 200+ 基礎模型（含 Gemini、Claude 等），並提供免費試用額度。",
+    "key_value": "將模型選擇、模型建置、代理建置、DevOps、編排與安全功能整合至單一平台，使企業能以代理為中心進行全棧 AI 應用開發，從晶片到員工收件匣。",
+    "practical_impact": "降低企業採用代理式 AI 的複雜度與門檻，加速從概念驗證到生產部署的流程，同時提供內建治理與持久化記憶，提升代理系統的可靠性與可觀測性。",
+    "details": "平台採用 pay‑as‑you‑go 定價模式，新客戶可獲得最高 300 美元免費額度。Agent Engine Sessions 與 Memory Bank 提供跨互動的持久上下文，Agent Designer（視覺工作流畫布）處於預覽階段。平台支援多語言 ADK v1.0 穩定版、第三方夥伴代理（Box、Workday、Salesforce、ServiceNow）以及工作室版的無碼代理建置工具。所有功能均以 Gemini Enterprise Agent Platform 為品牌名稱提供。",
+    "organization": "Google Cloud",
+    "slug": "gemini-enterprise-agent-platform-april-2026"
+  }
+}

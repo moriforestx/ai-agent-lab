@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "topic": "ai-agents",
+  "recorded_at": "2026-09-09T06:37:20+08:00",
+  "digest": "67a4d7d454eeebb6af6505a5557443226750791fba7000acc1d0f6f459366d65",
+  "candidate": {
+    "result": "accepted",
+    "request_count": 1,
+    "title": "Microsoft Agent Framework 1.0 GA: Unified Enterprise Agent Platform",
+    "published_date": "2026-04-03",
+    "source_url": "https://www.dataiku.com/blog/ai-agent-frameworks",
+    "content_type": "technical-development",
+    "score": 4.6,
+    "summary": "微軟在 2026 年 4 月 3 日正式發佈 Microsoft Agent Framework 1.0，將 Semantic Kernel 的企業功能與 AutoGen 的代理抽象合併，提供圖形工作流程、A2A 與 MCP 支援、檢查點、串流以及人類回路（human‑in‑the‑loop）等特色，取代 AutoGen 成為其企業級代理開發的首選框架。",
+    "key_value": "首次將圖形化工作流程（graph workflows）與持久化檢查點原生整合至企業級代理框架，使得長期運行的多代理系統能透過內建機制實現斷點恢復與狀態序列化，降低自訂開發複雜度。",
+    "practical_impact": "企業可直接採用微軟堆棧（.NET、Python）建置具備容錯與可觀測性的代理應用程式，加速從概念驗證到生產部署的過程，同時減少對第三方狀態管理庫的依賴。",
+    "details": "框架支援 Python 與 .NET (C#)。提供 Agent Harness + Hosted Agents + CodeAct 預覽（於 BUILD 2026）。後續開發重點將聚焦於新功能投資，而 AutoGen 則進入維護模式，僅收到錯誤修復與安全補丁。文件與範例可於 Microsoft Docs 取得。",
+    "organization": "Microsoft",
+    "slug": "microsoft-agent-framework-1-0-april-2026"
+  }
+}

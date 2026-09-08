@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "date": "2026-09-08",
+  "created_at": "2026-09-09T06:30:08+08:00",
+  "updated_at": "2026-09-09T06:38:32+08:00",
+  "request_budget": {
+    "limit": 15,
+    "used": 6
+  },
+  "topics": {
+    "ai-general": {
+      "name": "AI 綜合動態 / General AI Updates",
+      "result": "accepted",
+      "digest": "2ac717621067ea11fabc866b42b0579151a9f7029258f53a166dba3feb4e323a",
+      "checkpoint": "checkpoints/01-ai-general.json"
+    },
+    "computer-vision": {
+      "name": "電腦視覺 / Computer Vision",
+      "result": "accepted",
+      "digest": "40f046e555828cd7f8531e3c742a5ddc2efa86c4136872c8d77eef3919e41a15",
+      "checkpoint": "checkpoints/02-computer-vision.json"
+    },
+    "llm-nlp": {
+      "name": "大型語言模型與自然語言處理 / LLM & NLP",
+      "result": "accepted",
+      "digest": "204f6f0705e649b1eeb65c5213866063a4e0f330a8837d9338d2905bb045fa58",
+      "checkpoint": "checkpoints/03-llm-nlp.json"
+    },
+    "audio-speech": {
+      "name": "音訊與語音 / Audio & Speech",
+      "result": "accepted",
+      "digest": "5e9389c1dd7a5951671b162de1f7d710df5cdc923263d298f769cfbd65a3723a",
+      "checkpoint": "checkpoints/04-audio-speech.json"
+    },
+    "ai-agents": {
+      "name": "AI 代理人 / AI Agents",
+      "result": "accepted",
+      "digest": "67a4d7d454eeebb6af6505a5557443226750791fba7000acc1d0f6f459366d65",
+      "checkpoint": "checkpoints/05-ai-agents.json"
+    },
+    "ai-applications-deployment": {
+      "name": "AI 應用與部署 / AI Applications & Deployment",
+      "result": "accepted",
+      "digest": "8cef960338bed5f88f58c5150aebe3db7d9fc766e62744fab00c0f7de9ccfb7b",
+      "checkpoint": "checkpoints/06-ai-applications-deployment.json"
+    }
+  },
+  "render": {
+    "status": "RENDERED",
+    "at": "2026-09-09T06:38:32+08:00",
+    "daily": "Daily/2026-09-08.md"
+  },
+  "final": {
+    "status": "PENDING"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "topic": "audio-speech",
+  "recorded_at": "2026-09-09T06:36:53+08:00",
+  "digest": "5e9389c1dd7a5951671b162de1f7d710df5cdc923263d298f769cfbd65a3723a",
+  "candidate": {
+    "result": "accepted",
+    "request_count": 1,
+    "title": "OpenAI GPT-Realtime-2: Speech-to-Speech Model with 128K Context Window",
+    "published_date": "2026-05-15",
+    "source_url": "https://www.coval.ai/blog/voice-ai-models-2026",
+    "content_type": "technical-development",
+    "score": 4.4,
+    "summary": "OpenAI 在 2026 年 5 月發布 GPT-Realtime-2，為其語音‑語音（speech‑to‑speech）系列的第二代模型。該模型引入 GPT‑5 級別的推理能力到即時語音循環中，將上下文視窗擴展從 32K 提升至 128K token，並提供可調整的 reasoning‑effort 設定，以在延遲與品質之間取得平衡。",
+    "key_value": "將即時語音對話的上下文容量提升四倍，並允許動態調整推理深度，使得實時語音助理能在更長對話中保持連貫性，同時根據應用需求權衡延遲。",
+    "practical_impact": "提升實時客服、同聲傳譯及語音互動遊戲等場景的可用性，降低對多階段串流（STT → LLM → TTS）的依賴，減少錯誤傳播與延遲累積。",
+    "details": "模型接受原始音訊輸入並直接產出音訊，免去文字中介步驟。reasoning‑effort 參數可設定為 none, low, medium, high，對應不同的延遲與品質 trade‑off。基準測試顯示在標準設定下，語音識別正確率相較於前代提升約 8%。Whisper 大模型仍作為後備辨識引擎。",
+    "organization": "OpenAI",
+    "slug": "gpt-realtime-2-may-2026"
+  }
+}

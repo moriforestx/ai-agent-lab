@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "topic": "computer-vision",
+  "recorded_at": "2026-09-09T06:34:39+08:00",
+  "digest": "40f046e555828cd7f8531e3c742a5ddc2efa86c4136872c8d77eef3919e41a15",
+  "candidate": {
+    "result": "accepted",
+    "request_count": 1,
+    "title": "Ultralytics YOLO-Depth Models for Monocular Depth Estimation",
+    "published_date": "2026-07-01",
+    "source_url": "https://www.ultralytics.com/roadmap",
+    "content_type": "technical-development",
+    "score": 4.3,
+    "summary": "Ultralytics 在 2026 年 7 月發布 YOLO-Depth 模型系列，為 YOLO26 家族的延伸，提供單目深度估測功能。該系列包含五種尺寸（n/s/m/l/x），能從單一 RGB 圖像預測每像素深度圖（以米為單位），無需專用深度傳感器、立體相機或 LiDAR。YOLO26x-depth 版本在標準基準上達到 0.933 delta1 和 0.344m RMSE，參數量 57.0M。",
+    "key_value": "將場景幾何整合進現有的端到端工作流程，使機器人、導航、AR/VR 和自動駕駛系統能在不增加額外感測堆疊的情況下獲得 3D 空間感知。",
+    "practical_impact": "降低機器人與自動系統的硬體成本與複雜度，使 3D 空間理解能透過現有 RGB 攝像頭實現，加速人機協作與自動導航應用的部署。",
+    "details": "官方預訓練權重可於 ultralytics/assets 取得。模型支援熟悉的 Ultralytics YOLO 訓練、驗證、預測、校準、視覺化與匯出工作流程。隨 Ultralytics v8.4.104 一同釋出，同時改進損失函數計算與訓練日誌可靠性。論文參考：@misc{jocher2026ultralyticsyolo26unifiedrealtime}",
+    "organization": "Ultralytics",
+    "slug": "yolo-depth-models-july-2026"
+  }
+}

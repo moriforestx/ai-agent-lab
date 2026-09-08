@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "topic": "llm-nlp",
+  "recorded_at": "2026-09-09T06:36:30+08:00",
+  "digest": "204f6f0705e649b1eeb65c5213866063a4e0f330a8837d9338d2905bb045fa58",
+  "candidate": {
+    "result": "accepted",
+    "request_count": 1,
+    "title": "OpenAI GPT-5.4: 1.05M Token Context Window and Native Computer Use",
+    "published_date": "2026-08-15",
+    "source_url": "https://openai.com/index/introducing-gpt-5-4",
+    "content_type": "technical-development",
+    "score": 4.7,
+    "summary": "OpenAI 在 2026 年 8 月發布 GPT-5.4，成為首款支援 1,050,000 token 上下文窗口的通用模型，並內建原生電腦使用能力（computer use），使得 AI agent 能直接操作軟體與網頁環境。模型同時提供 Pro 與標準兩個定價層，並在 SWE-Bench Pro 上達到 57.7% 準確率。",
+    "key_value": "將上下文容量提升近十倍（從 400K 到 1.05M token），並加入電腦使用功能，讓單一模型即可處理超長文件、代碼基礎或法律合約，並自動完成跨應用程式工作流程。",
+    "practical_impact": "顯著降低處理長文本或複雜軟體任務所需的串接與外掛複雜度，提升企業級自動化、程式碼生成與法律文件審查等場景的效率與可靠性。",
+    "details": "API 標準定價：輸入 $2.50 / 輸出 $15.00 每 1M tokens；Pro 層 $30 / $180。最大輸出 128K tokens。在 272K token 以上的使用量將加倍計費。基準測試：SWE-Bench Pro 57.7%，Terminal-Bench 2.0 75.1%。支援工具搜尋（tool search）以在大型工具生態系統中尋找適當連接器。原生電腦使用能力使得 agent 能在桌面環境中導航、點擊與輸入，比肩人類表現。",
+    "organization": "OpenAI",
+    "slug": "gpt-5-4-august-2026"
+  }
+}
